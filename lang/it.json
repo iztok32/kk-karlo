@@ -60,5 +60,8 @@
     "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Una volta eliminato il tuo account, tutte le sue risorse e i suoi dati verranno eliminati in modo permanente. Inserisci la tua password per confermare che desideri eliminare permanentemente il tuo account.",
     "Cancel": "Annulla",
     "Update Password": "Aggiorna password",
-    "Welcome": "Benvenuto"
+    "Welcome": "Benvenuto",
+    "Light Mode": "Modalità chiara",
+    "Dark Mode": "Modalità scura",
+    "Toggle theme": "Cambia tema"
 }

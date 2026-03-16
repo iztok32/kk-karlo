@@ -61,5 +61,8 @@
     "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Ko bo vaš račun izbrisan, bodo vsi njegovi viri in podatki trajno izbrisani. Prosimo, vnesite svoje geslo, da potrdite, da želite trajno izbrisati svoj račun.",
     "Cancel": "Prekliči",
     "Update Password": "Posodobi geslo",
-    "Welcome": "Dobrodošli"
+    "Welcome": "Dobrodošli",
+    "Light Mode": "Svetla tema",
+    "Dark Mode": "Temna tema",
+    "Toggle theme": "Preklop teme"
 }

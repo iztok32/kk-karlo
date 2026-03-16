@@ -60,5 +60,8 @@
     "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Nakon što se vaš račun obriše, svi njegovi resursi i podaci bit će trajno obrisani. Unesite lozinku kako biste potvrdili da želite trajno obrisati svoj račun.",
     "Cancel": "Odustani",
     "Update Password": "Ažuriraj lozinku",
-    "Welcome": "Dobrodošli"
+    "Welcome": "Dobrodošli",
+    "Light Mode": "Svijetli način",
+    "Dark Mode": "Tamni način",
+    "Toggle theme": "Promijeni temu"
 }

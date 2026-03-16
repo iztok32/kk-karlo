@@ -3,6 +3,7 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
+import ThemeToggle from '@/Components/ThemeToggle';
 import { useTranslation } from '@/lib/i18n';
 import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState } from 'react';
@@ -68,28 +69,30 @@ export default function AuthenticatedLayout({
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content>
-                                        <div className="border-b border-gray-100 px-4 py-2 sm:hidden">
-                                            <LanguageSwitcher />
-                                        </div>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
-                                            {t('Profile')}
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                        >
-                                            {t('Log Out')}
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
+                            <div className="border-b border-gray-100 flex items-center justify-between px-4 py-2 sm:hidden">
+                                        <LanguageSwitcher />
+                                        <ThemeToggle />
+                                    </div>
+                                    <Dropdown.Link
+                                        href={route('profile.edit')}
+                                    >
+                                        {t('Profile')}
+                                    </Dropdown.Link>
+                                    <Dropdown.Link
+                                        href={route('logout')}
+                                        method="post"
+                                        as="button"
+                                    >
+                                        {t('Log Out')}
+                                    </Dropdown.Link>
+                                </Dropdown.Content>
+                            </Dropdown>
+                        </div>
 
-                            <div className="ms-3 hidden sm:flex">
-                                <LanguageSwitcher />
-                            </div>
+                        <div className="ms-3 hidden sm:flex items-center space-x-4">
+                            <ThemeToggle />
+                            <LanguageSwitcher />
+                        </div>
                         </div>
 
                         <div className="-me-2 flex items-center sm:hidden">
