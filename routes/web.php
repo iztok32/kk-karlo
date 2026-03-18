@@ -28,6 +28,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('news', \App\Http\Controllers\Club\NewsController::class);
     Route::post('horseman/reorder', [\App\Http\Controllers\Club\HorsemanController::class, 'reorder'])->name('horseman.reorder');
     Route::resource('horseman', \App\Http\Controllers\Club\HorsemanController::class);
+    Route::post('appointment/reorder', [\App\Http\Controllers\Club\AppointmentController::class, 'reorder'])->name('appointment.reorder');
+    Route::resource('appointment', \App\Http\Controllers\Club\AppointmentController::class);
 });
 
 require __DIR__.'/auth.php';
