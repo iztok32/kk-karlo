@@ -13,10 +13,10 @@ class HorseNavigationSeeder extends Seeder
         $clubParent = NavigationItem::where('title_key', 'Club')->first();
 
         NavigationItem::updateOrCreate(
-            ['url' => '/club/horses'],
+            ['url' => '/horses'],
             [
-                'parent_id' => $clubParent ? $clubParent->id : null,
-                'type' => $clubParent ? 'child' : 'main',
+                'parent_id' => null,
+                'type' => 'main',
                 'title_key' => 'Konji',
                 'icon' => 'Horse',
                 'sort_order' => 10,

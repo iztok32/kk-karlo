@@ -19,12 +19,11 @@ class HorseController extends Controller
 
     public function store(Request $request)
     {
-        \Log::info('Horse store request:', $request->all());
+        Log::info('Horse store request:', $request->all());
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'year' => 'required|numeric|min:1900',
-            'display_order' => 'nullable|numeric',
             'is_active' => 'sometimes',
         ]);
 
@@ -32,19 +31,21 @@ class HorseController extends Controller
             $validated['is_active'] = $request->boolean('is_active');
         }
 
+        // Set display_order to the next available value
+        $validated['display_order'] = Horse::max('display_order') + 1;
+
         Horse::create($validated);
 
-        return redirect()->back()->with('success', 'Konj uspešno dodan.');
+        return redirect()->back()->with('success', __('Horse successfully added.'));
     }
 
     public function update(Request $request, Horse $horse)
     {
-        \Log::info('Horse update request:', $request->all());
+        Log::info('Horse update request:', $request->all());
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'year' => 'required|numeric|min:1900',
-            'display_order' => 'nullable|numeric',
             'is_active' => 'sometimes',
         ]);
 
@@ -54,13 +55,27 @@ class HorseController extends Controller
 
         $horse->update($validated);
 
-        return redirect()->back()->with('success', 'Podatki o konju uspešno posodobljeni.');
+        return redirect()->back()->with('success', __('Horse data successfully updated.'));
     }
 
     public function destroy(Horse $horse)
     {
         $horse->delete();
 
-        return redirect()->back()->with('success', 'Konj uspešno izbrisan.');
+        return redirect()->back()->with('success', __('Horse successfully deleted.'));
+    }
+
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:horses,id',
+        ]);
+
+        foreach ($request->ids as $index => $id) {
+            Horse::where('id', $id)->update(['display_order' => $index]);
+        }
+
+        return redirect()->back()->with('success', __('Order successfully updated.'));
     }
 }

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('horses', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->integer('year');
+            $table->integer('year')->nullable();
             $table->integer('display_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->softDeletes();
