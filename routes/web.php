@@ -25,6 +25,9 @@ Route::middleware('auth')->group(function () {
 
     Route::post('horses/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorder'])->name('horses.reorder');
     Route::resource('horses', \App\Http\Controllers\Club\HorseController::class);
+    Route::resource('news', \App\Http\Controllers\Club\NewsController::class);
+    Route::post('horseman/reorder', [\App\Http\Controllers\Club\HorsemanController::class, 'reorder'])->name('horseman.reorder');
+    Route::resource('horseman', \App\Http\Controllers\Club\HorsemanController::class);
 });
 
 require __DIR__.'/auth.php';
