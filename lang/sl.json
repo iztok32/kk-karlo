@@ -64,7 +64,6 @@
     "Welcome": "Dobrodošli",
     "Light Mode": "Svetla tema",
     "Dark Mode": "Temna tema",
-{
     "Toggle theme": "Preklop teme",
     "Horse Management": "Upravljanje konjev",
     "Horses": "Konji",
@@ -182,5 +181,4 @@
     "Confirm Delete": "Potrdi brisanje",
     "Are you sure you want to delete this navigation item? This action cannot be undone.": "Ali ste prepričani, da želite izbrisati ta element navigacije? Tega dejanja ni mogoče razveljaviti.",
     "Show Active Only": "Prikaži samo aktivne"
-}
 }
