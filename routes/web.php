@@ -22,7 +22,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
     Route::post('horses/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorder'])->name('horses.reorder');
     Route::resource('horses', \App\Http\Controllers\Club\HorseController::class);
     Route::resource('news', \App\Http\Controllers\Club\NewsController::class);
@@ -30,6 +29,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('horseman', \App\Http\Controllers\Club\HorsemanController::class);
     Route::post('appointment/reorder', [\App\Http\Controllers\Club\AppointmentController::class, 'reorder'])->name('appointment.reorder');
     Route::resource('appointment', \App\Http\Controllers\Club\AppointmentController::class);
+    Route::resource('navigation', \App\Http\Controllers\Core\NavigationItemController::class)->except(['create', 'edit', 'show']);
+    Route::post('navigation/reorder', [\App\Http\Controllers\Core\NavigationItemController::class, 'reorder'])->name('navigation.reorder');
 });
 
 require __DIR__.'/auth.php';
