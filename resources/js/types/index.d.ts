@@ -10,11 +10,15 @@ export interface User {
 
 export interface NavigationItem {
     id: number;
+    parent_id?: number | null;
     type: string;
     title_key: string;
-    url?: string;
-    icon?: string;
+    url?: string | null;
+    icon?: string | null;
     metadata?: any;
+    sort_order: number;
+    is_active: boolean;
+    permission?: string | null;
     children?: NavigationItem[];
 }
 
