@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
             'locale' => app()->getLocale(),
             'availableLocales' => config('app.available_locales'),
             'navigation' => [
+                'configs' => \App\Models\NavigationConfig::all()->pluck('label', 'type'),
                 'main' => NavigationItem::where('type', 'main')
                     ->whereNull('parent_id')
                     ->where('is_active', true)

@@ -30,6 +30,7 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
         sort_order: item?.sort_order || 0,
         is_active: item?.is_active ?? true,
         permission: item?.permission || '',
+        metadata: item?.metadata || {},
     });
 
     const submit: FormEventHandler = (e) => {
@@ -138,6 +139,40 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
                         onChange={(e) => setData('permission', e.target.value)}
                         placeholder="admin.access"
                     />
+                </div>
+
+                <div className="space-y-4 border-t pt-4">
+                    <Label className="text-sm font-bold">{t('Metadata Settings')}</Label>
+                    
+                    {data.type === 'team' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="meta_plan">{t('Plan (Team)')}</Label>
+                            <Input
+                                id="meta_plan"
+                                value={data.metadata?.plan || ''}
+                                onChange={(e) => setData('metadata', { ...data.metadata, plan: e.target.value })}
+                                placeholder="Free, Pro, Enterprise"
+                            />
+                        </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <Label htmlFor="metadata_raw">{t('Custom Metadata (JSON)')}</Label>
+                        <textarea
+                            id="metadata_raw"
+                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={JSON.stringify(data.metadata || {}, null, 2)}
+                            onChange={(e) => {
+                                try {
+                                    setData('metadata', JSON.parse(e.target.value));
+                                } catch (err) {
+                                    // Handle invalid JSON gracefully during typing if needed
+                                    // Or just let them type and validate on blur
+                                }
+                            }}
+                            placeholder="{}"
+                        />
+                    </div>
                 </div>
 
                 <div className="flex items-center space-x-2">

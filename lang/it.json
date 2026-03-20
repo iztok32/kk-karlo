@@ -184,5 +184,8 @@
     "Confirm Delete": "Conferma eliminazione",
     "Are you sure you want to delete this navigation item? This action cannot be undone.": "Sei sicuro di voler eliminare questo elemento di navigazione? Questa azione non può essere annullata.",
     "Delete": "Elimina",
-    "Show Active Only": "Mostra solo attivi"
+    "Show Active Only": "Mostra solo attivi",
+    "Metadata Settings": "Impostazioni metadati",
+    "Plan (Team)": "Piano (Team)",
+    "Custom Metadata (JSON)": "Metadati personalizzati (JSON)"
 }

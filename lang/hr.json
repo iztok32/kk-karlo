@@ -179,5 +179,9 @@
     "Create Item": "Izradi stavku",
     "Confirm Delete": "Potvrdi brisanje",
     "Are you sure you want to delete this navigation item? This action cannot be undone.": "Jeste li sigurni da želite obrisati ovu stavku navigacije? Ova radnja se ne može poništiti.",
-    "Show Active Only": "Prikaži samo aktivne"
+    "Delete": "Obriši",
+    "Show Active Only": "Prikaži samo aktivne",
+    "Metadata Settings": "Postavke metapodataka",
+    "Plan (Team)": "Plan (Tim)",
+    "Custom Metadata (JSON)": "Prilagođeni metapodaci (JSON)"
 }

@@ -29,32 +29,33 @@ export function AppSidebar({
     navigation: { 
         main: NavigationItem[], 
         teams: NavigationItem[], 
-        projects: NavigationItem[] 
+        projects: NavigationItem[],
+        configs?: Record<string, string>
     } 
 }) {
   const { t } = useTranslation();
 
   const teams = navigation.teams.map(team => ({
-    name: t(team.title_key),
-    logo: IconMapper(team.icon),
+    name: t(team.title_key || ''),
+    logo: IconMapper(team.icon || undefined),
     plan: team.metadata?.plan || '',
   }));
 
   const navMain = navigation.main.map(item => ({
-    title: t(item.title_key),
+    title: t(item.title_key || ''),
     url: item.url || '#',
-    icon: IconMapper(item.icon),
+    icon: IconMapper(item.icon || undefined),
     isActive: false, 
     items: item.children?.map(sub => ({
-      title: t(sub.title_key),
+      title: t(sub.title_key || ''),
       url: sub.url || '#',
     })) || [],
   }));
 
   const projects = navigation.projects.map(project => ({
-    name: t(project.title_key),
+    name: t(project.title_key || ''),
     url: project.url || '#',
-    icon: IconMapper(project.icon),
+    icon: IconMapper(project.icon || undefined),
   }));
 
   return (
@@ -63,8 +64,8 @@ export function AppSidebar({
         <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} label={t("Platform")} />
-        <NavProjects projects={projects} />
+        <NavMain items={navMain} label={navigation.configs?.main || t("Platform")} />
+        <NavProjects projects={projects} label={navigation.configs?.project || t("Projects")} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={{

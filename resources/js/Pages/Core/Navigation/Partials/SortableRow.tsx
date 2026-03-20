@@ -4,9 +4,17 @@ import { CSS } from '@dnd-kit/utilities';
 import { TableRow, TableCell } from '@/Components/ui/table';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
-import { Edit2, Trash2, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { Edit2, Trash2, GripVertical, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
 import { NavigationItem } from '@/types';
 import { useTranslation } from '@/lib/i18n';
+
+const IconMapper = (iconName?: string) => {
+    if (!iconName) return null;
+    const IconComponent = (LucideIcons as any)[iconName];
+    if (!IconComponent) return <HelpCircle className="h-4 w-4 text-muted-foreground/50" />;
+    return <IconComponent className="h-4 w-4 text-muted-foreground" />;
+};
 
 interface Props {
     item: NavigationItem;
@@ -65,8 +73,15 @@ export function SortableRow({
                     ) : (
                         <div className="w-6" />
                     )}
+                    <div className="flex items-center mr-2">
+                        {IconMapper(item.icon || undefined)}
+                    </div>
                     <span className="font-medium">{t(item.title_key)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({item.title_key})</span>
+                    {item.children && item.children.length > 0 && (
+                        <Badge variant="default" className="ml-2 px-1 text-[10px] h-4">
+                            {item.children.length}
+                        </Badge>
+                    )}
                 </div>
             </TableCell>
             <TableCell className="w-[300px]">

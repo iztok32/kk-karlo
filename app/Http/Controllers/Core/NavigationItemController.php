@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Core;
 
 use App\Http\Controllers\Controller;
 use App\Models\NavigationItem;
+use App\Models\NavigationConfig;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -79,5 +80,19 @@ class NavigationItemController extends Controller
         }
 
         return redirect()->back()->with('success', 'Order updated successfully');
+    }
+
+    public function updateConfig(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|exists:navigation_configs,type',
+            'label' => 'required|string|max:255',
+        ]);
+
+        NavigationConfig::where('type', $validated['type'])->update([
+            'label' => $validated['label'],
+        ]);
+
+        return redirect()->back()->with('success', 'Configuration updated successfully');
     }
 }

@@ -180,5 +180,9 @@
     "Create Item": "Create Item",
     "Confirm Delete": "Confirm Delete",
     "Are you sure you want to delete this navigation item? This action cannot be undone.": "Are you sure you want to delete this navigation item? This action cannot be undone.",
-    "Show Active Only": "Show Active Only"
+    "Delete": "Delete",
+    "Show Active Only": "Show Active Only",
+    "Metadata Settings": "Metadata Settings",
+    "Plan (Team)": "Plan (Team)",
+    "Custom Metadata (JSON)": "Custom Metadata (JSON)"
 }

@@ -12,7 +12,7 @@ import {
     TableRow,
 } from '@/Components/ui/table';
 import { Button } from '@/Components/ui/button';
-import { Plus, Eye, Check } from 'lucide-react';
+import { Plus, Eye, Check, Edit2 } from 'lucide-react';
 import {
     Sheet,
     SheetContent,
@@ -50,9 +50,12 @@ import { SortableRow } from './Partials/SortableRow';
 
 interface Props {
     items: NavigationItem[];
+    navigation: {
+        configs: Record<string, string>;
+    };
 }
 
-export default function Index({ items }: Props) {
+export default function Index({ items, navigation }: Props) {
     const { t } = useTranslation();
     const [localItems, setLocalItems] = useState(items);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -191,8 +194,11 @@ export default function Index({ items }: Props) {
         });
     };
 
-    const NavigationCard = ({ type, title }: { type: string, title: string }) => {
+    const NavigationCard = ({ type, defaultTitle }: { type: string, defaultTitle: string }) => {
         const onlyActive = showActiveByType[type] || false;
+        const currentTitle = navigation.configs[type] || defaultTitle;
+        const [isEditingTitle, setIsEditingTitle] = useState(false);
+        const [titleValue, setTitleValue] = useState(currentTitle);
         
         const topLevelItems = useMemo(() => 
             localItems.filter(item => item.type === type && !item.parent_id)
@@ -202,10 +208,50 @@ export default function Index({ items }: Props) {
 
         const visibleIds = useMemo(() => getVisibleIds(topLevelItems, onlyActive), [topLevelItems, expandedItems, onlyActive]);
 
+        const saveTitle = () => {
+            if (titleValue !== currentTitle) {
+                router.post(route('navigation.updateConfig'), {
+                    type,
+                    label: titleValue
+                }, {
+                    onSuccess: () => setIsEditingTitle(false)
+                });
+            } else {
+                setIsEditingTitle(false);
+            }
+        };
+
         return (
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                    <CardTitle>{t(title)}</CardTitle>
+                    <div className="flex items-center gap-2 group cursor-pointer h-9">
+                        {isEditingTitle ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    autoFocus
+                                    className="text-lg font-semibold bg-transparent border-b border-primary focus:outline-none"
+                                    value={titleValue}
+                                    onChange={(e) => setTitleValue(e.target.value)}
+                                    onBlur={saveTitle}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') saveTitle();
+                                        if (e.key === 'Escape') {
+                                            setTitleValue(currentTitle);
+                                            setIsEditingTitle(false);
+                                        }
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <CardTitle 
+                                className="flex items-center gap-2"
+                                onClick={() => setIsEditingTitle(true)}
+                            >
+                                {t(currentTitle)}
+                                <Edit2 className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+                            </CardTitle>
+                        )}
+                    </div>
                     <div className="flex items-center gap-6">
                         <div className="relative inline-flex items-center">
                             <Switch 
@@ -273,9 +319,9 @@ export default function Index({ items }: Props) {
             <Head title={t('Navigation')} />
 
             <div className="space-y-8">
-                <NavigationCard type="main" title="Main Navigation" />
-                <NavigationCard type="team" title="Team Navigation" />
-                <NavigationCard type="project" title="Project Navigation" />
+                <NavigationCard type="main" defaultTitle="Main Navigation" />
+                <NavigationCard type="team" defaultTitle="Team Navigation" />
+                <NavigationCard type="project" defaultTitle="Project Navigation" />
             </div>
 
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
