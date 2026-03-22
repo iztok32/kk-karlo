@@ -14,11 +14,7 @@ import {
 import { NavigationItem, User } from "@/types"
 import { useTranslation } from "@/lib/i18n"
 
-const IconMapper = (iconName?: string) => {
-  if (!iconName) return Icons.HelpCircle;
-  const IconComponent = (Icons as any)[iconName];
-  return IconComponent || Icons.HelpCircle;
-}
+import { IconMapper } from "@/lib/icon-mapper"
 
 export function AppSidebar({ 
     user, 
@@ -27,21 +23,18 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & { 
     user: User, 
     navigation: { 
-        main: NavigationItem[], 
-        teams: NavigationItem[], 
-        projects: NavigationItem[],
-        configs?: Record<string, string>
+        blocks: {
+            type: string,
+            group: string,
+            label: string,
+            items: NavigationItem[]
+        }[],
+        configs: Record<string, string>
     } 
 }) {
   const { t } = useTranslation();
 
-  const teams = navigation.teams.map(team => ({
-    name: t(team.title_key || ''),
-    logo: IconMapper(team.icon || undefined),
-    plan: team.metadata?.plan || '',
-  }));
-
-  const navMain = navigation.main.map(item => ({
+  const mapItems = (items: NavigationItem[]) => items.map(item => ({
     title: t(item.title_key || ''),
     url: item.url || '#',
     icon: IconMapper(item.icon || undefined),
@@ -52,7 +45,23 @@ export function AppSidebar({
     })) || [],
   }));
 
-  const projects = navigation.projects.map(project => ({
+  const mainBlocks = navigation.blocks.filter(b => b.group === 'main');
+  const headerBlocks = navigation.blocks.filter(b => b.group === 'header');
+  const settingsBlocks = navigation.blocks.filter(b => b.group === 'settings');
+  const userBlocks = navigation.blocks.filter(b => b.group === 'users');
+
+  const teams = headerBlocks.flatMap(block => block.items).map(team => {
+    const isUrl = team.icon?.includes('/') || team.icon?.includes('.');
+    return {
+      name: t(team.title_key || ''),
+      logo: isUrl ? null : IconMapper(team.icon || undefined),
+      logoUrl: isUrl ? team.icon : (team.metadata?.logo_url || null),
+      plan: team.metadata?.plan || '',
+      isLogo: team.metadata?.is_logo || isUrl || false,
+    };
+  });
+
+  const projects = settingsBlocks.flatMap(block => block.items).map(project => ({
     name: t(project.title_key || ''),
     url: project.url || '#',
     icon: IconMapper(project.icon || undefined),
@@ -64,15 +73,30 @@ export function AppSidebar({
         <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} label={navigation.configs?.main || t("Platform")} />
-        <NavProjects projects={projects} label={navigation.configs?.project || t("Projects")} />
+        {mainBlocks.map(block => (
+          <NavMain 
+            key={block.type}
+            items={mapItems(block.items)} 
+            label={navigation.configs[block.type] || t(block.label)} 
+          />
+        ))}
+        {settingsBlocks.map(block => (
+          <NavProjects 
+            key={block.type}
+            projects={mapItems(block.items).map(i => ({ name: i.title, url: i.url, icon: i.icon }))} 
+            label={navigation.configs[block.type] || t(block.label)} 
+          />
+        ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={{
-          name: user.name,
-          email: user.email,
-          avatar: undefined 
-        }} />
+        <NavUser 
+          user={{
+            name: user.name,
+            email: user.email,
+            avatar: undefined 
+          }} 
+          items={userBlocks.flatMap(b => mapItems(b.items)).map(i => ({ title: i.title, url: i.url, icon: i.icon }))}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

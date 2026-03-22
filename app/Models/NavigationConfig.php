@@ -9,6 +9,8 @@ class NavigationConfig extends Model
     protected $fillable = [
         'type',
         'label',
+        'group',
+        'sort_order',
         'is_visible',
     ];
 }

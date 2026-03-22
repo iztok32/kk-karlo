@@ -3,10 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class Permission extends Model
+class Permission extends Model implements AuditableContract
 {
-    protected $fillable = ['name', 'slug', 'module'];
+    use SoftDeletes, Auditable;
+
+    protected $fillable = ['name', 'slug', 'module', 'is_active'];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function roles()
     {

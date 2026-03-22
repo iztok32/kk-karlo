@@ -5,7 +5,7 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Switch } from '@/Components/ui/switch';
 import { NavigationItem } from '@/types';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState, useEffect } from 'react';
 
 // Since I don't see Select in the provided list, I will use a custom styled select or check if it exists
 // Wait, I will use a standard select with tailwind styling for reliability if SHADCN select is missing
@@ -32,6 +32,14 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
         permission: item?.permission || '',
         metadata: item?.metadata || {},
     });
+
+    const [metadataString, setMetadataString] = useState(JSON.stringify(item?.metadata || {}, null, 2));
+
+    useEffect(() => {
+        if (!item) {
+            setMetadataString('{}');
+        }
+    }, [item]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -85,9 +93,10 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
                                 value={data.type}
                                 onChange={(e) => setData('type', e.target.value)}
                             >
-                                <option value="main">Main</option>
-                                <option value="project">Project</option>
-                                <option value="team">Team</option>
+                                <option value="main">{t('Main Menu')}</option>
+                                <option value="header">{t('Header (Glava)')}</option>
+                                <option value="settings">{t('Settings (Nastavitveni)')}</option>
+                                <option value="users">{t('Users (Uporabnikov)')}</option>
                             </select>
                         </div>
                     )}
@@ -144,7 +153,16 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
                 <div className="space-y-4 border-t pt-4">
                     <Label className="text-sm font-bold">{t('Metadata Settings')}</Label>
                     
-                    {data.type === 'team' && (
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="meta_is_logo"
+                            checked={data.metadata?.is_logo || false}
+                            onCheckedChange={(checked) => setData('metadata', { ...data.metadata, is_logo: checked })}
+                        />
+                        <Label htmlFor="meta_is_logo">{t('Use as Logo (No Background)')}</Label>
+                    </div>
+
+                    {(data.type === 'header' || data.type === 'team') && (
                         <div className="space-y-2">
                             <Label htmlFor="meta_plan">{t('Plan (Team)')}</Label>
                             <Input
@@ -160,14 +178,14 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
                         <Label htmlFor="metadata_raw">{t('Custom Metadata (JSON)')}</Label>
                         <textarea
                             id="metadata_raw"
-                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={JSON.stringify(data.metadata || {}, null, 2)}
+                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                            value={metadataString}
                             onChange={(e) => {
+                                setMetadataString(e.target.value);
                                 try {
                                     setData('metadata', JSON.parse(e.target.value));
                                 } catch (err) {
-                                    // Handle invalid JSON gracefully during typing if needed
-                                    // Or just let them type and validate on blur
+                                    // Silent catch while typing invalid JSON
                                 }
                             }}
                             placeholder="{}"

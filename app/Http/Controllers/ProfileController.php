@@ -18,9 +18,16 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
+            'permissions' => [
+                'canView' => $user->hasPermission('profile.view'),
+                'canEdit' => $user->hasPermission('profile.edit'),
+                'canDelete' => $user->hasPermission('profile.delete'),
+            ],
         ]);
     }
 
@@ -29,6 +36,11 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        // Check if user has permission to edit profile
+        if (!$request->user()->hasPermission('profile.edit')) {
+            abort(403, 'You do not have permission to edit your profile.');
+        }
+
         $request->user()->fill($request->validated());
 
         if ($request->user()->isDirty('email')) {
@@ -45,6 +57,11 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        // Check if user has permission to delete account
+        if (!$request->user()->hasPermission('profile.delete')) {
+            abort(403, 'You do not have permission to delete your account.');
+        }
+
         $request->validate([
             'password' => ['required', 'current_password'],
         ]);

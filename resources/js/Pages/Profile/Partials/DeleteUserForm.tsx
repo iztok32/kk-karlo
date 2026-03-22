@@ -1,14 +1,19 @@
-import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
-import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
 import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import { useTranslation } from "@/lib/i18n";
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/Components/ui/dialog';
 
-export default function DeleteUserForm({ className = '' }) {
+export default function DeleteUserForm() {
     const { t } = useTranslation();
     const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
     const passwordInput = useRef();
@@ -42,75 +47,62 @@ export default function DeleteUserForm({ className = '' }) {
 
     const closeModal = () => {
         setConfirmingUserDeletion(false);
-
         clearErrors();
         reset();
     };
 
     return (
-        <section className={`space-y-6 ${className}`}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    {t('Delete Account')}
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium">{t('Delete Account')}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                     {t('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.')}
                 </p>
-            </header>
+            </div>
 
-            <DangerButton onClick={confirmUserDeletion}>
+            <Button variant="destructive" onClick={confirmUserDeletion}>
                 {t('Delete Account')}
-            </DangerButton>
+            </Button>
 
-            <Modal show={confirmingUserDeletion} onClose={closeModal}>
-                <form onSubmit={deleteUser} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        {t('Are you sure you want to delete your account?')}
-                    </h2>
+            <Dialog open={confirmingUserDeletion} onOpenChange={setConfirmingUserDeletion}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('Are you sure you want to delete your account?')}</DialogTitle>
+                        <DialogDescription>
+                            {t('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.')}
+                        </DialogDescription>
+                    </DialogHeader>
 
-                    <p className="mt-1 text-sm text-gray-600">
-                        {t('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.')}
-                    </p>
+                    <form onSubmit={deleteUser}>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="password" className="sr-only">{t('Password')}</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    ref={passwordInput}
+                                    value={data.password}
+                                    onChange={(e) => setData('password', e.target.value)}
+                                    placeholder={t('Password')}
+                                    autoFocus
+                                />
+                                {errors.password && (
+                                    <p className="text-sm text-destructive">{errors.password}</p>
+                                )}
+                            </div>
+                        </div>
 
-                    <div className="mt-6">
-                        <InputLabel
-                            htmlFor="password"
-                            value={t('Password')}
-                            className="sr-only"
-                        />
-
-                        <TextInput
-                            id="password"
-                            type="password"
-                            name="password"
-                            ref={passwordInput}
-                            value={data.password}
-                            onChange={(e) =>
-                                setData('password', e.target.value)
-                            }
-                            className="mt-1 block w-3/4"
-                            isFocused
-                            placeholder={t('Password')}
-                        />
-
-                        <InputError
-                            message={errors.password}
-                            className="mt-2"
-                        />
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeModal}>
-                            {t('Cancel')}
-                        </SecondaryButton>
-
-                        <DangerButton className="ms-3" disabled={processing}>
-                            {t('Delete Account')}
-                        </DangerButton>
-                    </div>
-                </form>
-            </Modal>
-        </section>
+                        <DialogFooter className="mt-6">
+                            <Button type="button" variant="ghost" onClick={closeModal}>
+                                {t('Cancel')}
+                            </Button>
+                            <Button type="submit" variant="destructive" disabled={processing}>
+                                {t('Delete Account')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }

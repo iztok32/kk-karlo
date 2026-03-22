@@ -1,16 +1,22 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { useTranslation } from "@/lib/i18n";
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { Alert, AlertDescription } from '@/Components/ui/alert';
+import { CheckCircle2, Eye } from 'lucide-react';
+
+interface Props {
+    mustVerifyEmail: boolean;
+    status?: string;
+    canEdit: boolean;
+}
 
 export default function UpdateProfileInformation({
     mustVerifyEmail,
     status,
-    className = '',
-}) {
+    canEdit,
+}: Props) {
     const { t } = useTranslation();
     const user = usePage().props.auth.user;
 
@@ -18,97 +24,125 @@ export default function UpdateProfileInformation({
         useForm({
             name: user.name,
             email: user.email,
+            gsm_number: user.gsm_number || '',
         });
 
     const submit = (e) => {
         e.preventDefault();
-
-        patch(route('profile.update'));
+        if (canEdit) {
+            patch(route('profile.update'));
+        }
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    {t('Profile Information')}
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
-                    {t("Update your account's profile information and email address.")}
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                    {canEdit ? t('Profile Information') : (
+                        <>
+                            <Eye className="h-5 w-5" />
+                            {t('Profile Information')} ({t('Read Only')})
+                        </>
+                    )}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                    {canEdit
+                        ? t("Update your account's profile information and email address.")
+                        : t("View your account's profile information and email address.")
+                    }
                 </p>
-            </header>
+            </div>
 
-            <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="name" value={t('Name')} />
-
-                    <TextInput
+            <form onSubmit={submit} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">{t('Name')}</Label>
+                    <Input
                         id="name"
-                        className="mt-1 block w-full"
                         value={data.name}
                         onChange={(e) => setData('name', e.target.value)}
                         required
-                        isFocused
                         autoComplete="name"
+                        disabled={!canEdit}
+                        readOnly={!canEdit}
+                        className={!canEdit ? 'cursor-not-allowed opacity-60' : ''}
                     />
-
-                    <InputError className="mt-2" message={errors.name} />
+                    {errors.name && (
+                        <p className="text-sm text-destructive">{errors.name}</p>
+                    )}
                 </div>
 
-                <div>
-                    <InputLabel htmlFor="email" value={t('Email')} />
-
-                    <TextInput
+                <div className="space-y-2">
+                    <Label htmlFor="email">{t('Email')}</Label>
+                    <Input
                         id="email"
                         type="email"
-                        className="mt-1 block w-full"
                         value={data.email}
                         onChange={(e) => setData('email', e.target.value)}
                         required
                         autoComplete="username"
+                        disabled={!canEdit}
+                        readOnly={!canEdit}
+                        className={!canEdit ? 'cursor-not-allowed opacity-60' : ''}
                     />
+                    {errors.email && (
+                        <p className="text-sm text-destructive">{errors.email}</p>
+                    )}
+                </div>
 
-                    <InputError className="mt-2" message={errors.email} />
+                <div className="space-y-2">
+                    <Label htmlFor="gsm_number">{t('GSM Number')}</Label>
+                    <Input
+                        id="gsm_number"
+                        type="tel"
+                        value={data.gsm_number}
+                        onChange={(e) => setData('gsm_number', e.target.value)}
+                        placeholder="+386 XX XXX XXX"
+                        autoComplete="tel"
+                        disabled={!canEdit}
+                        readOnly={!canEdit}
+                        className={!canEdit ? 'cursor-not-allowed opacity-60' : ''}
+                    />
+                    {errors.gsm_number && (
+                        <p className="text-sm text-destructive">{errors.gsm_number}</p>
+                    )}
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (
-                    <div>
-                        <p className="mt-2 text-sm text-gray-800">
-                            {t('Your email address is unverified.')}
+                    <Alert>
+                        <AlertDescription>
+                            {t('Your email address is unverified.')}{' '}
                             <Link
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
-                                className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                className="underline hover:no-underline"
                             >
                                 {t('Click here to re-send the verification email.')}
                             </Link>
-                        </p>
-
+                        </AlertDescription>
                         {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-green-600">
+                            <AlertDescription className="mt-2 font-medium text-green-600">
                                 {t('A new verification link has been sent to your email address.')}
+                            </AlertDescription>
+                        )}
+                    </Alert>
+                )}
+
+                {canEdit && (
+                    <div className="flex items-center gap-4">
+                        <Button type="submit" disabled={processing}>
+                            {t('Save')}
+                        </Button>
+
+                        {recentlySuccessful && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                <span>{t('Saved.')}</span>
                             </div>
                         )}
                     </div>
                 )}
-
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>{t('Save')}</PrimaryButton>
-
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">
-                            {t('Saved.')}
-                        </p>
-                    </Transition>
-                </div>
             </form>
-        </section>
+        </div>
     );
 }

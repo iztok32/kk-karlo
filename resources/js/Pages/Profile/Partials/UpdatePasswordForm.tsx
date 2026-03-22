@@ -1,13 +1,12 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
 import { useTranslation } from "@/lib/i18n";
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { CheckCircle2 } from 'lucide-react';
 
-export default function UpdatePasswordForm({ className = '' }) {
+export default function UpdatePasswordForm() {
     const { t } = useTranslation();
     const passwordInput = useRef();
     const currentPasswordInput = useRef();
@@ -47,97 +46,72 @@ export default function UpdatePasswordForm({ className = '' }) {
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    {t('Update Password')}
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium">{t('Update Password')}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                     {t('Ensure your account is using a long, random password to stay secure.')}
                 </p>
-            </header>
+            </div>
 
-            <form onSubmit={updatePassword} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel
-                        htmlFor="current_password"
-                        value={t('Current Password')}
-                    />
-
-                    <TextInput
+            <form onSubmit={updatePassword} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="current_password">{t('Current Password')}</Label>
+                    <Input
                         id="current_password"
                         ref={currentPasswordInput}
-                        value={data.current_password}
-                        onChange={(e) =>
-                            setData('current_password', e.target.value)
-                        }
                         type="password"
-                        className="mt-1 block w-full"
+                        value={data.current_password}
+                        onChange={(e) => setData('current_password', e.target.value)}
                         autoComplete="current-password"
                     />
-
-                    <InputError
-                        message={errors.current_password}
-                        className="mt-2"
-                    />
+                    {errors.current_password && (
+                        <p className="text-sm text-destructive">{errors.current_password}</p>
+                    )}
                 </div>
 
-                <div>
-                    <InputLabel htmlFor="password" value={t('New Password')} />
-
-                    <TextInput
+                <div className="space-y-2">
+                    <Label htmlFor="password">{t('New Password')}</Label>
+                    <Input
                         id="password"
                         ref={passwordInput}
+                        type="password"
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
                         autoComplete="new-password"
                     />
-
-                    <InputError message={errors.password} className="mt-2" />
+                    {errors.password && (
+                        <p className="text-sm text-destructive">{errors.password}</p>
+                    )}
                 </div>
 
-                <div>
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value={t('Confirm Password')}
-                    />
-
-                    <TextInput
+                <div className="space-y-2">
+                    <Label htmlFor="password_confirmation">{t('Confirm Password')}</Label>
+                    <Input
                         id="password_confirmation"
-                        value={data.password_confirmation}
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
                         type="password"
-                        className="mt-1 block w-full"
+                        value={data.password_confirmation}
+                        onChange={(e) => setData('password_confirmation', e.target.value)}
                         autoComplete="new-password"
                     />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
+                    {errors.password_confirmation && (
+                        <p className="text-sm text-destructive">{errors.password_confirmation}</p>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>{t('Save')}</PrimaryButton>
+                    <Button type="submit" disabled={processing}>
+                        {t('Save')}
+                    </Button>
 
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">
-                            {t('Saved.')}
-                        </p>
-                    </Transition>
+                    {recentlySuccessful && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span>{t('Saved.')}</span>
+                        </div>
+                    )}
                 </div>
             </form>
-        </section>
+        </div>
     );
 }

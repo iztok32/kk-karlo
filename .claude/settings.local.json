@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan db:seed --class=UsersModuleSeeder)",
+      "Bash(composer require owen-it/laravel-auditing)",
+      "Bash(where composer)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\composer.bat\" require owen-it/laravel-auditing)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan vendor:publish --provider=\"OwenIt\\Auditing\\AuditingServiceProvider\" --tag=\"config\")",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan vendor:publish --tag=\"auditing-config\")",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan vendor:publish --provider=\"OwenIt\\Auditing\\AuditingServiceProvider\")",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan auditing:install)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:migration create_audits_table)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan db:seed --class=AuditLogModuleSeeder)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\composer.bat\" dump-autoload)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:migration add_gsm_number_to_users_table)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:migration create_notifications_table)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:model Notification)",
+      "Bash(dir e:web-projectlaravel-reactapp)",
+      "Bash(dir app)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:controller Core/NotificationController)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:seeder NotificationModuleSeeder)",
+      "Bash(npx shadcn@canary add collapsible)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan migrate)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan db:seed --class=NotificationModuleSeeder)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan migrate:rollback --step=1)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

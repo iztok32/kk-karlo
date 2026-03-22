@@ -28,6 +28,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/Components/ui/dialog';
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '@/Components/ui/tabs';
 import NavigationForm from './Partials/NavigationForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Switch } from '@/Components/ui/switch';
@@ -50,12 +56,17 @@ import { SortableRow } from './Partials/SortableRow';
 
 interface Props {
     items: NavigationItem[];
-    navigation: {
-        configs: Record<string, string>;
-    };
+    groups: Record<string, {
+        id: number;
+        type: string;
+        label: string;
+        group: string;
+        sort_order: number;
+        is_visible: boolean;
+    }[]>;
 }
 
-export default function Index({ items, navigation }: Props) {
+export default function Index({ items, groups }: Props) {
     const { t } = useTranslation();
     const [localItems, setLocalItems] = useState(items);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -64,6 +75,8 @@ export default function Index({ items, navigation }: Props) {
     const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+    const [isBlockDeleteDialogOpen, setIsBlockDeleteDialogOpen] = useState(false);
+    const [blockToDelete, setBlockToDelete] = useState<string | null>(null);
     const [showActiveByType, setShowActiveByType] = useState<Record<string, boolean>>({
         main: false,
         team: false,
@@ -104,6 +117,17 @@ export default function Index({ items, navigation }: Props) {
                 onSuccess: () => {
                     setIsDeleteDialogOpen(false);
                     setItemToDelete(null);
+                },
+            });
+        }
+    };
+
+    const confirmBlockDelete = () => {
+        if (blockToDelete) {
+            router.delete(route('navigation.deleteBlock', blockToDelete), {
+                onSuccess: () => {
+                    setIsBlockDeleteDialogOpen(false);
+                    setBlockToDelete(null);
                 },
             });
         }
@@ -194,11 +218,16 @@ export default function Index({ items, navigation }: Props) {
         });
     };
 
-    const NavigationCard = ({ type, defaultTitle }: { type: string, defaultTitle: string }) => {
+    const NavigationCard = ({ config }: { config: any }) => {
+        const type = config.type;
         const onlyActive = showActiveByType[type] || false;
-        const currentTitle = navigation.configs[type] || defaultTitle;
+        const currentTitle = config.label;
         const [isEditingTitle, setIsEditingTitle] = useState(false);
         const [titleValue, setTitleValue] = useState(currentTitle);
+        
+        useEffect(() => {
+            setTitleValue(currentTitle);
+        }, [currentTitle]);
         
         const topLevelItems = useMemo(() => 
             localItems.filter(item => item.type === type && !item.parent_id)
@@ -219,6 +248,11 @@ export default function Index({ items, navigation }: Props) {
             } else {
                 setIsEditingTitle(false);
             }
+        };
+
+        const deleteBlock = () => {
+            setBlockToDelete(type);
+            setIsBlockDeleteDialogOpen(true);
         };
 
         return (
@@ -250,6 +284,19 @@ export default function Index({ items, navigation }: Props) {
                                 {t(currentTitle)}
                                 <Edit2 className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
                             </CardTitle>
+                        )}
+                        {!['main', 'header', 'settings', 'users'].includes(type) && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteBlock();
+                                }}
+                            >
+                                <Plus className="h-4 w-4 rotate-45" />
+                            </Button>
                         )}
                     </div>
                     <div className="flex items-center gap-6">
@@ -319,9 +366,53 @@ export default function Index({ items, navigation }: Props) {
             <Head title={t('Navigation')} />
 
             <div className="space-y-8">
-                <NavigationCard type="main" defaultTitle="Main Navigation" />
-                <NavigationCard type="team" defaultTitle="Team Navigation" />
-                <NavigationCard type="project" defaultTitle="Project Navigation" />
+                <Tabs defaultValue="main" className="w-full">
+                    <TabsList className="mb-4">
+                        <TabsTrigger value="main">{t('Glavni meni')}</TabsTrigger>
+                        <TabsTrigger value="settings">{t('Nastavitveni (settings)')}</TabsTrigger>
+                        <TabsTrigger value="users">{t('Uporabnikov meni')}</TabsTrigger>
+                        <TabsTrigger value="header">{t('Glava (header)')}</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="main" className="space-y-8">
+                        <div className="flex justify-end">
+                            <Button 
+                                onClick={() => {
+                                    const label = prompt(t('Enter block name'));
+                                    if (label) {
+                                        router.post(route('navigation.addBlock'), { label });
+                                    }
+                                }}
+                                variant="outline"
+                                className="gap-2"
+                            >
+                                <Plus className="h-4 w-4" />
+                                {t('Add New Block')}
+                            </Button>
+                        </div>
+                        {groups.main?.map(config => (
+                            <NavigationCard key={config.type} config={config} />
+                        ))}
+                    </TabsContent>
+                    
+                    <TabsContent value="settings" className="space-y-8">
+                        {groups.settings?.map(config => (
+                            <NavigationCard key={config.type} config={config} />
+                        ))}
+                    </TabsContent>
+
+                    <TabsContent value="users" className="space-y-8">
+                        {groups.users?.map(config => (
+                            <NavigationCard key={config.type} config={config} />
+                        ))}
+                    </TabsContent>
+
+                    <TabsContent value="header" className="space-y-8">
+                        {groups.header?.map(config => (
+                            <NavigationCard key={config.type} config={config} />
+                        ))}
+                    </TabsContent>
+                </Tabs>
             </div>
 
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -354,6 +445,24 @@ export default function Index({ items, navigation }: Props) {
                             {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmDelete}>
+                            {t('Delete')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isBlockDeleteDialogOpen} onOpenChange={setIsBlockDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('Confirm Delete Block')}</DialogTitle>
+                        <DialogDescription>
+                            {t('Are you sure you want to delete this navigation block and all its items? This action cannot be undone.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsBlockDeleteDialogOpen(false)}>
+                            {t('Cancel')}
+                        </Button>
+                        <Button variant="destructive" onClick={confirmBlockDelete}>
                             {t('Delete')}
                         </Button>
                     </DialogFooter>

@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import {
   BadgeCheck,
   Bell,
@@ -32,15 +33,22 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/Components/ui/sidebar"
+import { IconMapper } from "@/lib/icon-mapper"
 
 export function NavUser({
   user,
+  items = [],
 }: {
   user: {
     name: string
     email: string
     avatar?: string
-  }
+  },
+  items?: {
+    title: string
+    url: string
+    icon?: any
+  }[]
 }) {
   const { isMobile } = useSidebar()
   const { t } = useTranslation()
@@ -87,30 +95,22 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href={route('profile.edit')} className="flex w-full items-center">
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  {t('Profile')}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard className="mr-2 h-4 w-4" />
-                {t('Billing')}
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell className="mr-2 h-4 w-4" />
-                {t('Notifications')}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+            
+            {items.length > 0 && <DropdownMenuSeparator />}
+            
+            {items.map((item, index) => (
+              <React.Fragment key={index}>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href={item.url} className="flex w-full items-center">
+                      {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+                      {t(item.title)}
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </React.Fragment>
+            ))}
+
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />

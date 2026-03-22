@@ -50,6 +50,25 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Check if user is active and not deleted
+        $user = Auth::user();
+
+        if (!$user->is_active) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Your account has been deactivated. Please contact an administrator.',
+            ]);
+        }
+
+        if ($user->deleted_at) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Your account has been deleted. Please contact an administrator.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
