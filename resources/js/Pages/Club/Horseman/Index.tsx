@@ -20,8 +20,9 @@ import {
 } from '@/Components/ui/table';
 import { useForm, Head } from '@inertiajs/react';
 import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, Check, X, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, Plus, Check, X, GripVertical, Search } from 'lucide-react';
 import { Switch } from '@/Components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import {
   DndContext,
   closestCenter,
@@ -41,6 +42,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 interface HorsemanType {
   id: number;
@@ -93,13 +95,15 @@ function SortableRow({
       </TableCell>
       <TableCell className="font-medium">{item.name}</TableCell>
       <TableCell>
-        {item.is_active ? (
-          <Check className="h-4 w-4 text-green-500" />
-        ) : (
-          <X className="h-4 w-4 text-red-500" />
-        )}
+        <div className="flex justify-center">
+          {item.is_active ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <X className="h-4 w-4 text-red-500" />
+          )}
+        </div>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="w-[100px] text-right">
         <Button
           variant="ghost"
           size="icon"
@@ -127,6 +131,14 @@ export default function Index({ horsemanTypes: initialItems }: Props) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<HorsemanType | null>(null);
   const [itemToDelete, setItemToDelete] = useState<HorsemanType | null>(null);
+  const [showActive, setShowActive] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredItems = localItems.filter(item => {
+    const matchesStatus = item.is_active === showActive;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   useEffect(() => {
     setLocalItems(initialItems);
@@ -225,14 +237,47 @@ export default function Index({ horsemanTypes: initialItems }: Props) {
       <Head title={t('Horseman Types')} />
 
       <div className="py-12">
-        <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="mx-auto w-full sm:px-6 lg:px-8">
           <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">{t('Horseman Type List')}</h3>
-                <Button onClick={openAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" /> {t('Add Horseman Type')}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t('Search horseman types...')}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative inline-flex items-center">
+                        <Switch 
+                          checked={showActive}
+                          onCheckedChange={setShowActive}
+                          className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                        />
+                        <X className={cn(
+                          "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-0" : "opacity-100"
+                        )} />
+                        <Check className={cn(
+                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-100" : "opacity-0"
+                        )} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('Show active/inactive horseman types')}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button onClick={openAddDialog}>
+                    <Plus className="mr-2 h-4 w-4" /> {t('Add Horseman Type')}
+                  </Button>
+                </div>
               </div>
 
               <div className="rounded-md border">
@@ -246,23 +291,25 @@ export default function Index({ horsemanTypes: initialItems }: Props) {
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
                         <TableHead>{t('Name')}</TableHead>
-                        <TableHead>{t('Active')}</TableHead>
-                        <TableHead className="text-right">{t('Actions')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {localItems.length === 0 ? (
+                      {filteredItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-4">
-                            {t('No horseman types found.')}
+                          <TableCell colSpan={4} className="text-center py-4 text-muted-foreground italic">
+                            {searchTerm 
+                              ? t('No horseman types found matching ":search".', { search: searchTerm }) 
+                              : (showActive ? t('No active horseman types found.') : t('No inactive horseman types found.'))}
                           </TableCell>
                         </TableRow>
                       ) : (
                         <SortableContext
-                          items={localItems.map((h) => h.id)}
+                          items={filteredItems.map((h) => h.id)}
                           strategy={verticalListSortingStrategy}
                         >
-                          {localItems.map((item) => (
+                          {filteredItems.map((item) => (
                             <SortableRow
                               key={item.id}
                               item={item}

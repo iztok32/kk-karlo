@@ -20,8 +20,9 @@ import {
 } from '@/Components/ui/table';
 import { useForm, Head } from '@inertiajs/react';
 import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, Check, X, GripVertical, Calendar as CalendarIcon } from 'lucide-react';
+import { Pencil, Trash2, Plus, Check, X, GripVertical, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Switch } from '@/Components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import {
   DndContext,
   closestCenter,
@@ -180,13 +181,15 @@ function SortableRow({
         </div>
       </TableCell>
       <TableCell>
-        {item.is_active ? (
-          <Check className="h-4 w-4 text-green-500" />
-        ) : (
-          <X className="h-4 w-4 text-red-500" />
-        )}
+        <div className="flex justify-center">
+          {item.is_active ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <X className="h-4 w-4 text-red-500" />
+          )}
+        </div>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="w-[100px] text-right">
         <Button
           variant="ghost"
           size="icon"
@@ -214,6 +217,14 @@ export default function Index({ appointments: initialItems }: Props) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Appointment | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Appointment | null>(null);
+  const [showActive, setShowActive] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredItems = localItems.filter(item => {
+    const matchesStatus = item.is_active === showActive;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   const getLocale = (l: string) => {
     switch (l) {
@@ -365,14 +376,47 @@ export default function Index({ appointments: initialItems }: Props) {
       <Head title={t('Appointments')} />
 
       <div className="py-12">
-        <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="mx-auto w-full sm:px-6 lg:px-8">
           <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">{t('Appointment List')}</h3>
-                <Button onClick={openAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" /> {t('Add Appointment')}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t('Search appointments...')}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative inline-flex items-center">
+                        <Switch 
+                          checked={showActive}
+                          onCheckedChange={setShowActive}
+                          className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                        />
+                        <X className={cn(
+                          "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-0" : "opacity-100"
+                        )} />
+                        <Check className={cn(
+                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-100" : "opacity-0"
+                        )} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('Show active/inactive appointments')}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button onClick={openAddDialog}>
+                    <Plus className="mr-2 h-4 w-4" /> {t('Add Appointment')}
+                  </Button>
+                </div>
               </div>
 
               <div className="rounded-md border">
@@ -388,23 +432,25 @@ export default function Index({ appointments: initialItems }: Props) {
                         <TableHead>{t('Name')}</TableHead>
                         <TableHead>{t('Days')}</TableHead>
                         <TableHead>{t('Validity')}</TableHead>
-                        <TableHead>{t('Active')}</TableHead>
-                        <TableHead className="text-right">{t('Actions')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {localItems.length === 0 ? (
+                      {filteredItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            {t('No appointments found.')}
+                          <TableCell colSpan={6} className="text-center py-4 text-muted-foreground italic">
+                            {searchTerm 
+                              ? t('No appointments found matching ":search".', { search: searchTerm }) 
+                              : (showActive ? t('No active appointments found.') : t('No inactive appointments found.'))}
                           </TableCell>
                         </TableRow>
                       ) : (
                         <SortableContext
-                          items={localItems.map((h) => h.id)}
+                          items={filteredItems.map((h) => h.id)}
                           strategy={verticalListSortingStrategy}
                         >
-                          {localItems.map((item) => (
+                          {filteredItems.map((item) => (
                             <SortableRow
                               key={item.id}
                               item={item}

@@ -21,8 +21,9 @@ import {
 } from '@/Components/ui/table';
 import { useForm, Head } from '@inertiajs/react';
 import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, Check, X, Calendar } from 'lucide-react';
+import { Pencil, Trash2, Plus, Check, X, Calendar, Search } from 'lucide-react';
 import { Switch } from '@/Components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import { useTranslation } from '@/lib/i18n';
 import { format, parseISO } from 'date-fns';
 import { sl, enGB, hr, it, de } from 'date-fns/locale';
@@ -67,6 +68,14 @@ export default function Index({ news }: Props) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<News | null>(null);
   const [newsToDelete, setNewsToDelete] = useState<News | null>(null);
+  const [showActive, setShowActive] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredNews = news.filter(item => {
+    const matchesStatus = item.is_active === showActive;
+    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
     title: '',
@@ -149,14 +158,47 @@ export default function Index({ news }: Props) {
       <Head title={t('News')} />
 
       <div className="py-12">
-        <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="mx-auto w-full sm:px-6 lg:px-8">
           <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">{t('News List')}</h3>
-                <Button onClick={openAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" /> {t('Add News')}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t('Search news...')}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative inline-flex items-center">
+                        <Switch 
+                          checked={showActive}
+                          onCheckedChange={setShowActive}
+                          className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                        />
+                        <X className={cn(
+                          "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-0" : "opacity-100"
+                        )} />
+                        <Check className={cn(
+                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-100" : "opacity-0"
+                        )} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('Show active/inactive news')}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button onClick={openAddDialog}>
+                    <Plus className="mr-2 h-4 w-4" /> {t('Add News')}
+                  </Button>
+                </div>
               </div>
 
               <div className="rounded-md border">
@@ -165,48 +207,56 @@ export default function Index({ news }: Props) {
                     <TableRow>
                       <TableHead>{t('Title')}</TableHead>
                       <TableHead>{t('Published At')}</TableHead>
-                      <TableHead>{t('Public')}</TableHead>
-                      <TableHead>{t('Auth')}</TableHead>
-                      <TableHead>{t('Active')}</TableHead>
-                      <TableHead className="text-right">{t('Actions')}</TableHead>
+                      <TableHead className="w-[100px] text-center">{t('Public')}</TableHead>
+                      <TableHead className="w-[100px] text-center">{t('Auth')}</TableHead>
+                      <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
+                      <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {news.length === 0 ? (
+                    {filteredNews.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-4">
-                          {t('No news found.')}
+                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground italic">
+                          {searchTerm 
+                            ? t('No news found matching ":search".', { search: searchTerm }) 
+                            : (showActive ? t('No active news found.') : t('No inactive news found.'))}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      news.map((item) => (
+                      filteredNews.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.title}</TableCell>
                           <TableCell>
                             {item.published_at ? format(new Date(item.published_at), 'Pp', { locale: currentLocale }) : '-'}
                           </TableCell>
                           <TableCell>
-                            {item.is_on_public_page ? (
-                              <Check className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <X className="h-4 w-4 text-red-500" />
-                            )}
+                            <div className="flex justify-center">
+                              {item.is_on_public_page ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <X className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {item.is_on_auth_page ? (
-                              <Check className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <X className="h-4 w-4 text-red-500" />
-                            )}
+                            <div className="flex justify-center">
+                              {item.is_on_auth_page ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <X className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {item.is_active ? (
-                              <Check className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <X className="h-4 w-4 text-red-500" />
-                            )}
+                            <div className="flex justify-center">
+                              {item.is_active ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <X className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="w-[100px] text-right">
                             <Button
                               variant="ghost"
                               size="icon"

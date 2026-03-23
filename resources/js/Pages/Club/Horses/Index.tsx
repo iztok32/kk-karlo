@@ -20,8 +20,9 @@ import {
 } from '@/Components/ui/table';
 import { useForm, Head } from '@inertiajs/react';
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Pencil, Trash2, Plus, Check, X, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, Plus, Check, X, GripVertical, Search } from 'lucide-react';
 import { Switch } from '@/Components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import { 
   DndContext, 
   closestCenter, 
@@ -41,6 +42,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 interface Horse {
   id: number;
@@ -93,15 +95,17 @@ function SortableRow({
         </button>
       </TableCell>
       <TableCell className="font-medium">{horse.name}</TableCell>
-      <TableCell>{horse.year}</TableCell>
+      <TableCell className="text-center">{horse.year}</TableCell>
       <TableCell>
-        {horse.is_active ? (
-          <Check className="h-4 w-4 text-green-500" />
-        ) : (
-          <X className="h-4 w-4 text-red-500" />
-        )}
+        <div className="flex justify-center">
+          {horse.is_active ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <X className="h-4 w-4 text-red-500" />
+          )}
+        </div>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="w-[100px] text-right">
         <Button
           variant="ghost"
           size="icon"
@@ -129,6 +133,14 @@ export default function Index({ horses: initialHorses }: Props) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
   const [horseToDelete, setHorseToDelete] = useState<Horse | null>(null);
+  const [showActive, setShowActive] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredHorses = localHorses.filter(h => {
+    const matchesStatus = h.is_active === showActive;
+    const matchesSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   useEffect(() => {
     setLocalHorses(initialHorses);
@@ -229,14 +241,47 @@ export default function Index({ horses: initialHorses }: Props) {
       <Head title={t('Horses')} />
 
       <div className="py-12">
-        <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="mx-auto w-full sm:px-6 lg:px-8">
           <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">{t('Horse List')}</h3>
-                <Button onClick={openAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" /> {t('Add Horse')}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t('Search horses...')}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative inline-flex items-center">
+                        <Switch 
+                          checked={showActive}
+                          onCheckedChange={setShowActive}
+                          className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                        />
+                        <X className={cn(
+                          "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-0" : "opacity-100"
+                        )} />
+                        <Check className={cn(
+                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showActive ? "opacity-100" : "opacity-0"
+                        )} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('Show active/inactive horses')}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button onClick={openAddDialog}>
+                    <Plus className="mr-2 h-4 w-4" /> {t('Add Horse')}
+                  </Button>
+                </div>
               </div>
 
               <div className="rounded-md border">
@@ -250,24 +295,26 @@ export default function Index({ horses: initialHorses }: Props) {
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
                         <TableHead>{t('Name')}</TableHead>
-                        <TableHead>{t('Year')}</TableHead>
-                        <TableHead>{t('Active')}</TableHead>
-                        <TableHead className="text-right">{t('Actions')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Year')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {localHorses.length === 0 ? (
+                      {filteredHorses.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-4">
-                            {t('No horse data.')}
+                          <TableCell colSpan={5} className="text-center py-4 text-muted-foreground italic">
+                            {searchTerm 
+                              ? t('No horses found matching ":search".', { search: searchTerm }) 
+                              : (showActive ? t('No active horses found.') : t('No inactive horses found.'))}
                           </TableCell>
                         </TableRow>
                       ) : (
                         <SortableContext
-                          items={localHorses.map((h) => h.id)}
+                          items={filteredHorses.map((h) => h.id)}
                           strategy={verticalListSortingStrategy}
                         >
-                          {localHorses.map((horse) => (
+                          {filteredHorses.map((horse) => (
                             <SortableRow
                               key={horse.id}
                               horse={horse}
