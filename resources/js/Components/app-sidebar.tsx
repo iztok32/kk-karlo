@@ -1,7 +1,6 @@
 import * as React from "react"
 import * as Icons from "lucide-react"
 import { NavMain } from "@/Components/nav-main"
-import { NavProjects } from "@/Components/nav-projects"
 import { NavUser } from "@/Components/nav-user"
 import { TeamSwitcher } from "@/Components/team-switcher"
 import {
@@ -38,10 +37,11 @@ export function AppSidebar({
     title: t(item.title_key || ''),
     url: item.url || '#',
     icon: IconMapper(item.icon || undefined),
-    isActive: false, 
+    isActive: false,
     items: item.children?.map(sub => ({
       title: t(sub.title_key || ''),
       url: sub.url || '#',
+      icon: IconMapper(sub.icon || undefined),
     })) || [],
   }));
 
@@ -61,12 +61,6 @@ export function AppSidebar({
     };
   });
 
-  const projects = settingsBlocks.flatMap(block => block.items).map(project => ({
-    name: t(project.title_key || ''),
-    url: project.url || '#',
-    icon: IconMapper(project.icon || undefined),
-  }));
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -74,27 +68,27 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {mainBlocks.map(block => (
-          <NavMain 
+          <NavMain
             key={block.type}
-            items={mapItems(block.items)} 
-            label={navigation.configs[block.type] || t(block.label)} 
+            items={mapItems(block.items)}
+            label={navigation.configs[block.type] || t(block.label)}
           />
         ))}
         {settingsBlocks.map(block => (
-          <NavProjects 
+          <NavMain
             key={block.type}
-            projects={mapItems(block.items).map(i => ({ name: i.title, url: i.url, icon: i.icon }))} 
-            label={navigation.configs[block.type] || t(block.label)} 
+            items={mapItems(block.items)}
+            label={navigation.configs[block.type] || t(block.label)}
           />
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser 
+        <NavUser
           user={{
             name: user.name,
             email: user.email,
-            avatar: undefined 
-          }} 
+            avatar: user.avatar ? `/storage/${user.avatar}` : undefined
+          }}
           items={userBlocks.flatMap(b => mapItems(b.items)).map(i => ({ title: i.title, url: i.url, icon: i.icon }))}
         />
       </SidebarFooter>

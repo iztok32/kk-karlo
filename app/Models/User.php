@@ -27,6 +27,8 @@ class User extends Authenticatable implements AuditableContract
         'password',
         'is_active',
         'gsm_number',
+        'avatar',
+        'config',
     ];
 
     /**
@@ -50,6 +52,7 @@ class User extends Authenticatable implements AuditableContract
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'config' => 'array',
         ];
     }
 
@@ -75,5 +78,37 @@ class User extends Authenticatable implements AuditableContract
     public function getPermissionsAttribute()
     {
         return $this->roles->flatMap->permissions->pluck('slug')->unique()->values();
+    }
+
+    /**
+     * Get a config value by key
+     */
+    public function getConfig(string $key, $default = null)
+    {
+        return data_get($this->config, $key, $default);
+    }
+
+    /**
+     * Set a config value by key
+     */
+    public function setConfig(string $key, $value): void
+    {
+        $config = $this->config ?? [];
+        data_set($config, $key, $value);
+        $this->config = $config;
+        $this->save();
+    }
+
+    /**
+     * Update multiple config values
+     */
+    public function updateConfig(array $values): void
+    {
+        $config = $this->config ?? [];
+        foreach ($values as $key => $value) {
+            data_set($config, $key, $value);
+        }
+        $this->config = $config;
+        $this->save();
     }
 }

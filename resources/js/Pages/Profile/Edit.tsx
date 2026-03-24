@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
+import UpdateProfileAvatar from './Partials/UpdateProfileAvatar';
 import { useTranslation } from "@/lib/i18n";
 import { Card, CardContent } from '@/Components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
@@ -86,11 +87,29 @@ export default function Edit({ mustVerifyEmail, status, permissions }: Props) {
 
                             {permissions.canView && (
                                 <TabsContent value="profile" className="mt-6">
-                                    <UpdateProfileInformationForm
-                                        mustVerifyEmail={mustVerifyEmail}
-                                        status={status}
-                                        canEdit={permissions.canEdit}
-                                    />
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        {/* Avatar Section - 1/3 width */}
+                                        <div className="lg:col-span-1">
+                                            <Card>
+                                                <CardContent className="p-6">
+                                                    <UpdateProfileAvatar canEdit={permissions.canEdit} />
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+
+                                        {/* Profile Information - 2/3 width */}
+                                        <div className="lg:col-span-2">
+                                            <Card>
+                                                <CardContent className="p-6">
+                                                    <UpdateProfileInformationForm
+                                                        mustVerifyEmail={mustVerifyEmail}
+                                                        status={status}
+                                                        canEdit={permissions.canEdit}
+                                                    />
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </div>
                                 </TabsContent>
                             )}
 

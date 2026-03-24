@@ -22,7 +22,12 @@
       "Bash(npx shadcn@canary add collapsible)",
       "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan migrate)",
       "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan db:seed --class=NotificationModuleSeeder)",
-      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan migrate:rollback --step=1)"
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan migrate:rollback --step=1)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:migration add_avatar_to_users_table)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan storage:link)",
+      "Bash(dir lang /b)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:migration add_config_to_users_table)",
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:controller UserConfigController)"
     ],
     "deny": [],
     "ask": []

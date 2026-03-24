@@ -17,18 +17,37 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Session::has('locale')) {
-            $locale = Session::get('locale');
-            if (in_array($locale, config('app.available_locales'))) {
-                App::setLocale($locale);
+        $locale = null;
+
+        // Priority 1: User config (if logged in)
+        if ($request->user() && $request->user()->config) {
+            $userLocale = $request->user()->getConfig('language');
+            if ($userLocale && in_array($userLocale, config('app.available_locales'))) {
+                $locale = $userLocale;
+                Session::put('locale', $locale);
             }
-        } else {
-            // Optional: detect from browser if no session
+        }
+
+        // Priority 2: Session
+        if (!$locale && Session::has('locale')) {
+            $sessionLocale = Session::get('locale');
+            if (in_array($sessionLocale, config('app.available_locales'))) {
+                $locale = $sessionLocale;
+            }
+        }
+
+        // Priority 3: Browser language detection
+        if (!$locale && $request->server('HTTP_ACCEPT_LANGUAGE')) {
             $browserLocale = substr($request->server('HTTP_ACCEPT_LANGUAGE'), 0, 2);
             if (in_array($browserLocale, config('app.available_locales'))) {
-                App::setLocale($browserLocale);
-                Session::put('locale', $browserLocale);
+                $locale = $browserLocale;
+                Session::put('locale', $locale);
             }
+        }
+
+        // Apply the determined locale
+        if ($locale) {
+            App::setLocale($locale);
         }
 
         return $next($request);

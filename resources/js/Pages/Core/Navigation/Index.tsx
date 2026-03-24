@@ -2,7 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
 import { NavigationItem } from '@/types';
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table,
     TableBody,
@@ -141,31 +141,73 @@ export default function Index({ items, groups }: Props) {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
-            const activeItem = localItems.find(i => i.id === active.id);
+            // Rekurzivna funkcija za iskanje elementa v hierarhiji
+            const findItem = (items: NavigationItem[], id: number): NavigationItem | undefined => {
+                for (const item of items) {
+                    if (item.id === id) return item;
+                    if (item.children) {
+                        const found = findItem(item.children, id);
+                        if (found) return found;
+                    }
+                }
+                return undefined;
+            };
+
+            // Rekurzivna funkcija za iskanje sorojencev
+            const findSiblings = (items: NavigationItem[], targetParentId: number | null | undefined): NavigationItem[] => {
+                // Če iščemo top-level elemente
+                if (targetParentId === null || targetParentId === undefined) {
+                    return items.filter(i => !i.parent_id && i.type === type);
+                }
+
+                // Iščemo starša v hierarhiji
+                for (const item of items) {
+                    if (item.id === targetParentId) {
+                        return item.children || [];
+                    }
+                    if (item.children) {
+                        const found = findSiblings(item.children, targetParentId);
+                        if (found.length > 0) return found;
+                    }
+                }
+                return [];
+            };
+
+            // Rekurzivna funkcija za posodobitev elementa v hierarhiji
+            const updateItemInHierarchy = (items: NavigationItem[], updatedItems: NavigationItem[]): NavigationItem[] => {
+                return items.map(item => {
+                    const updated = updatedItems.find(ui => ui.id === item.id);
+                    if (updated) {
+                        return { ...item, sort_order: updated.sort_order };
+                    }
+                    if (item.children) {
+                        return { ...item, children: updateItemInHierarchy(item.children, updatedItems) };
+                    }
+                    return item;
+                });
+            };
+
+            const activeItem = findItem(localItems, active.id as number);
             if (!activeItem) return;
 
-            const siblings = localItems.filter(i => 
-                i.type === type && i.parent_id === activeItem.parent_id
-            ).sort((a, b) => a.sort_order - b.sort_order);
+            const siblings = findSiblings(localItems, activeItem.parent_id)
+                .sort((a, b) => a.sort_order - b.sort_order);
 
             const oldIndex = siblings.findIndex(i => i.id === active.id);
             const newIndex = siblings.findIndex(i => i.id === over.id);
 
             if (oldIndex !== -1 && newIndex !== -1) {
                 const newOrderedItems = arrayMove(siblings, oldIndex, newIndex);
-                
-                const updatedAllItems = localItems.map(item => {
-                    const idx = newOrderedItems.findIndex(ni => ni.id === item.id);
-                    if (idx !== -1) {
-                        return { ...item, sort_order: idx };
-                    }
-                    return item;
-                });
+                const itemsWithNewOrder = newOrderedItems.map((item, index) => ({
+                    ...item,
+                    sort_order: index
+                }));
 
+                const updatedAllItems = updateItemInHierarchy(localItems, itemsWithNewOrder);
                 setLocalItems(updatedAllItems);
 
                 router.post(route('navigation.reorder', {
-                    items: newOrderedItems.map((item, index) => ({
+                    items: itemsWithNewOrder.map((item, index) => ({
                         id: item.id,
                         sort_order: index,
                     })),
@@ -174,48 +216,48 @@ export default function Index({ items, groups }: Props) {
         }
     };
 
-    const renderRows = (items: NavigationItem[], onlyActive: boolean, level = 0) => {
-        const filteredByStatus = onlyActive 
-            ? items.filter(i => i.is_active) 
+    const renderRows = (items: NavigationItem[], onlyActive: boolean, level = 0, parentId: number | null = null) => {
+        const filteredByStatus = onlyActive
+            ? items.filter(i => i.is_active)
             : items;
 
-        return filteredByStatus.flatMap((item) => {
-            const hasChildren = !!(item.children && item.children.length > 0);
-            const isExpanded = !!expandedItems[item.id];
+        const sortedItems = filteredByStatus.sort((a, b) => a.sort_order - b.sort_order);
+        const itemIds = sortedItems.map(item => item.id);
 
-            const rows = [
-                <SortableRow
-                    key={item.id}
-                    item={item}
-                    level={level}
-                    hasChildren={hasChildren}
-                    isExpanded={!!isExpanded}
-                    onToggleExpand={toggleExpand}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                />
-            ];
+        return (
+            <SortableContext
+                items={itemIds}
+                strategy={verticalListSortingStrategy}
+            >
+                {sortedItems.flatMap((item) => {
+                    const hasChildren = !!(item.children && item.children.length > 0);
+                    const isExpanded = !!expandedItems[item.id];
 
-            if (hasChildren && isExpanded) {
-                rows.push(...renderRows(item.children || [], onlyActive, level + 1));
-            }
+                    const rows = [
+                        <SortableRow
+                            key={item.id}
+                            item={item}
+                            level={level}
+                            hasChildren={hasChildren}
+                            isExpanded={!!isExpanded}
+                            onToggleExpand={toggleExpand}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                        />
+                    ];
 
-            return rows;
-        });
-    };
+                    if (hasChildren && isExpanded) {
+                        rows.push(
+                            <React.Fragment key={`children-${item.id}`}>
+                                {renderRows(item.children || [], onlyActive, level + 1, item.id)}
+                            </React.Fragment>
+                        );
+                    }
 
-    const getVisibleIds = (items: NavigationItem[], onlyActive: boolean): number[] => {
-        const filteredByStatus = onlyActive 
-            ? items.filter(i => i.is_active) 
-            : items;
-
-        return filteredByStatus.flatMap(item => {
-            const ids = [item.id];
-            if (expandedItems[item.id] && item.children) {
-                ids.push(...getVisibleIds(item.children, onlyActive));
-            }
-            return ids;
-        });
+                    return rows;
+                })}
+            </SortableContext>
+        );
     };
 
     const NavigationCard = ({ config }: { config: any }) => {
@@ -229,13 +271,11 @@ export default function Index({ items, groups }: Props) {
             setTitleValue(currentTitle);
         }, [currentTitle]);
         
-        const topLevelItems = useMemo(() => 
+        const topLevelItems = useMemo(() =>
             localItems.filter(item => item.type === type && !item.parent_id)
                 .filter(item => !onlyActive || item.is_active)
                 .sort((a, b) => a.sort_order - b.sort_order)
         , [localItems, type, onlyActive]);
-
-        const visibleIds = useMemo(() => getVisibleIds(topLevelItems, onlyActive), [topLevelItems, expandedItems, onlyActive]);
 
         const saveTitle = () => {
             if (titleValue !== currentTitle) {
@@ -333,20 +373,15 @@ export default function Index({ items, groups }: Props) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <SortableContext
-                                    items={visibleIds}
-                                    strategy={verticalListSortingStrategy}
-                                >
-                                    {topLevelItems.length > 0 ? (
-                                        renderRows(topLevelItems, onlyActive)
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                {t('No navigation items found.')}
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </SortableContext>
+                                {topLevelItems.length > 0 ? (
+                                    renderRows(topLevelItems, onlyActive)
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            {t('No navigation items found.')}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </DndContext>

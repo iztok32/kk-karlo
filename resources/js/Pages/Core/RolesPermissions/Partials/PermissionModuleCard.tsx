@@ -62,7 +62,7 @@ export default function PermissionModuleCard({
             type="single"
             collapsible
             className="border rounded-lg"
-            value={isOpen ? moduleData.module : undefined}
+            value={isOpen ? moduleData.module : ""}
             onValueChange={(value) => onOpenChange(value === moduleData.module)}
         >
             <AccordionItem value={moduleData.module} className="border-none">

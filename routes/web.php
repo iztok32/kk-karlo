@@ -57,6 +57,10 @@ Route::middleware('auth')->group(function () {
     Route::post('notifications/email', [\App\Http\Controllers\Core\NotificationController::class, 'sendEmail'])->name('notifications.send-email');
     Route::post('notifications/sms', [\App\Http\Controllers\Core\NotificationController::class, 'sendSms'])->name('notifications.send-sms');
     Route::post('notifications/{notification}/read', [\App\Http\Controllers\Core\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+
+    Route::get('user/config', [\App\Http\Controllers\UserConfigController::class, 'show'])->name('user.config.show');
+    Route::post('user/config', [\App\Http\Controllers\UserConfigController::class, 'update'])->name('user.config.update');
+    Route::post('user/config/batch', [\App\Http\Controllers\UserConfigController::class, 'updateBatch'])->name('user.config.batch');
 });
 
 require __DIR__.'/auth.php';

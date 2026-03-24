@@ -37,10 +37,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user ? array_merge($user->toArray(), [
                     'permissions' => $user->permissions,
+                    'config' => $user->config ?? [],
                 ]) : null,
             ],
             'locale' => app()->getLocale(),
             'availableLocales' => config('app.available_locales'),
+            'availableColorThemes' => config('app.available_color_themes'),
             'navigation' => [
                 'configs' => \App\Models\NavigationConfig::all()->pluck('label', 'type'),
                 'blocks' => \App\Models\NavigationConfig::orderBy('sort_order')->get()->map(function ($config) use ($user) {

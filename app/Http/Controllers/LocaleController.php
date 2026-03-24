@@ -19,6 +19,11 @@ class LocaleController
 
         session(['locale' => $request->locale]);
 
+        // Save to user config if logged in
+        if ($request->user()) {
+            $request->user()->setConfig('language', $request->locale);
+        }
+
         return redirect()->back();
     }
 }

@@ -27,7 +27,7 @@ export default function UpdateProfileInformation({
             gsm_number: user.gsm_number || '',
         });
 
-    const submit = (e) => {
+    const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (canEdit) {
             patch(route('profile.update'));

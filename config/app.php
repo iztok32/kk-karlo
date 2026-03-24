@@ -84,6 +84,8 @@ return [
 
     'available_locales' => array_filter(explode(',', env('AVAILABLE_LANGUAGES', 'sl,en'))),
 
+    'available_color_themes' => array_filter(explode(',', env('AVAILABLE_COLOR_THEMES', 'zinc,amber,blue,emerald,orange,red,green,purple,pink,cyan,teal,yellow,lime,indigo,violet,fuchsia,rose,slate'))),
+
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
     /*

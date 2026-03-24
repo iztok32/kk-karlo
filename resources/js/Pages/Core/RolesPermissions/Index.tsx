@@ -2,8 +2,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
-import RolesList from './Partials/RolesList';
 import RolePermissionsPanel from './Partials/RolePermissionsPanel';
 
 interface Role {
@@ -75,39 +73,17 @@ export default function Index({ roles, selectedRole, groupedPermissions, standar
         >
             <Head title={t('Roles & Permissions')} />
 
-            <div className="grid grid-cols-12 gap-4">
-                {/* Left Panel - Roles List */}
-                <div className="col-span-12 lg:col-span-3">
-                    <RolesList
-                        roles={roles}
-                        selectedRole={selectedRole}
-                        onRoleSelect={handleRoleSelect}
-                    />
-                </div>
-
-                {/* Right Panel - Permissions */}
-                <div className="col-span-12 lg:col-span-9">
-                    {selectedRole ? (
-                        <RolePermissionsPanel
-                            selectedRole={selectedRole}
-                            groupedPermissions={groupedPermissions}
-                            standardPermissions={standardPermissions}
-                            openAccordions={openAccordions}
-                            onExpandAll={handleExpandAll}
-                            onCollapseAll={handleCollapseAll}
-                            onAccordionChange={handleAccordionChange}
-                        />
-                    ) : (
-                        <Card>
-                            <CardContent className="py-12">
-                                <div className="text-center text-muted-foreground">
-                                    {t('Select a role to manage permissions')}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            </div>
+            <RolePermissionsPanel
+                roles={roles}
+                selectedRole={selectedRole}
+                groupedPermissions={groupedPermissions}
+                standardPermissions={standardPermissions}
+                openAccordions={openAccordions}
+                onExpandAll={handleExpandAll}
+                onCollapseAll={handleCollapseAll}
+                onAccordionChange={handleAccordionChange}
+                onRoleSelect={handleRoleSelect}
+            />
         </AuthenticatedLayout>
     );
 }

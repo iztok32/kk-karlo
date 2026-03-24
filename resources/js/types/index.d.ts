@@ -1,12 +1,21 @@
 import { Config, RouteParam, RouteName } from 'ziggy-js';
 
+export interface UserConfig {
+    theme?: 'light' | 'dark';
+    colorTheme?: string;
+    language?: string;
+    [key: string]: any;
+}
+
 export interface User {
     id: number;
     name: string;
     email: string;
     email_verified_at?: string;
     gsm_number?: string;
+    avatar?: string;
     permissions?: string[];
+    config?: UserConfig;
 }
 
 export interface NavigationItem {
@@ -31,6 +40,7 @@ export type PageProps<
     };
     locale: string;
     availableLocales: string[];
+    availableColorThemes: string[];
     translations: Record<string, string>;
     navigation: {
         main: NavigationItem[];
