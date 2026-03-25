@@ -117,10 +117,9 @@ class HandleInertiaRequests extends Middleware
                 }),
             ],
             'translations' => array_merge(
-                is_file(base_path("lang/".app()->getLocale().".json"))
-                    ? json_decode(file_get_contents(base_path("lang/".app()->getLocale().".json")), true)
-                    : [],
-                // Add PHP-based translations if needed, but here we focus on JSON for React
+                (is_file(base_path("lang/".app()->getLocale().".json")) 
+                    ? json_decode(file_get_contents(base_path("lang/".app()->getLocale().".json")), true) 
+                    : []) ?? [],
             ),
         ];
     }
