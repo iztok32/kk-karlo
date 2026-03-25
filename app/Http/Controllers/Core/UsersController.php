@@ -14,6 +14,16 @@ class UsersController extends Controller
 {
     public function index()
     {
+        $currentUser = request()->user();
+
+        // Get visible roles for current user
+        $visibleRoles = collect();
+        foreach ($currentUser->roles as $userRole) {
+            $visibleRoles = $visibleRoles->merge(Role::getVisibleRolesForRole($userRole->id));
+        }
+        $visibleRoles = $visibleRoles->unique('id');
+        $visibleRoleIds = $visibleRoles->pluck('id');
+
         $users = User::with('roles')
             ->orderBy('name')
             ->get()
@@ -30,11 +40,9 @@ class UsersController extends Controller
                 ];
             });
 
-        $roles = Role::orderBy('name')->get();
-
         return Inertia::render('Core/Users/Index', [
             'users' => $users,
-            'roles' => $roles,
+            'roles' => $visibleRoles->values(),
         ]);
     }
 

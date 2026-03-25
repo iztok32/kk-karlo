@@ -10,12 +10,27 @@ use Illuminate\Support\Str;
 
 class ModulesListController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $modules = Module::withCount('permissions')->orderBy('name')->get();
+        $search = $request->get('search', '');
+
+        $query = Module::withCount('permissions');
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('web_root', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $modules = $query->orderBy('name')->get();
 
         return Inertia::render('Core/ModulesList/Index', [
             'modules' => $modules,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 

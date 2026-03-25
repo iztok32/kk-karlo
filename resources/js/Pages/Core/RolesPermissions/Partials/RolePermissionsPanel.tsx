@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { ChevronsDownUp, ChevronsUpDown, ChevronsUpDown as SearchIcon } from 'lucide-react';
 import PermissionModuleCard from './PermissionModuleCard';
+import SidebarPreview from './SidebarPreview';
 import {
     Select,
     SelectContent,
@@ -10,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { useState } from 'react';
 import { Input } from '@/Components/ui/input';
 
@@ -38,36 +40,77 @@ interface ModulePermissions {
     total_count: number;
 }
 
+interface NavigationPreview {
+    configs: Record<string, string>;
+    blocks: {
+        type: string;
+        group: string;
+        label: string;
+        items: any[];
+    }[];
+}
+
 interface Props {
     roles: Role[];
     selectedRole: Role | null;
-    groupedPermissions: ModulePermissions[];
+    sidebarPermissions: ModulePermissions[];
+    nonSidebarPermissions: ModulePermissions[];
+    navigationPreview: NavigationPreview | null;
     standardPermissions: string[];
-    openAccordions: string[];
-    onExpandAll: () => void;
-    onCollapseAll: () => void;
-    onAccordionChange: (module: string, isOpen: boolean) => void;
     onRoleSelect: (roleId: number) => void;
+    canEditRole: boolean;
+    isSuperAdmin: boolean;
 }
 
 export default function RolePermissionsPanel({
     roles,
     selectedRole,
-    groupedPermissions,
+    sidebarPermissions,
+    nonSidebarPermissions,
+    navigationPreview,
     standardPermissions,
-    openAccordions,
-    onExpandAll,
-    onCollapseAll,
-    onAccordionChange,
     onRoleSelect,
+    canEditRole,
+    isSuperAdmin,
 }: Props) {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
+    const [openAccordionsSidebar, setOpenAccordionsSidebar] = useState<string[]>([]);
+    const [openAccordionsNonSidebar, setOpenAccordionsNonSidebar] = useState<string[]>([]);
+    const [selectedModuleWebRoot, setSelectedModuleWebRoot] = useState<string>('');
 
     const filteredRoles = roles.filter(role =>
         role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         role.slug.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const handleExpandAll = (tab: 'sidebar' | 'non-sidebar') => {
+        if (tab === 'sidebar') {
+            setOpenAccordionsSidebar(sidebarPermissions.map(g => g.module));
+        } else {
+            setOpenAccordionsNonSidebar(nonSidebarPermissions.map(g => g.module));
+        }
+    };
+
+    const handleCollapseAll = (tab: 'sidebar' | 'non-sidebar') => {
+        if (tab === 'sidebar') {
+            setOpenAccordionsSidebar([]);
+        } else {
+            setOpenAccordionsNonSidebar([]);
+        }
+    };
+
+    const handleAccordionChange = (module: string, isOpen: boolean, tab: 'sidebar' | 'non-sidebar') => {
+        if (tab === 'sidebar') {
+            setOpenAccordionsSidebar(prev =>
+                isOpen ? [...prev, module] : prev.filter(m => m !== module)
+            );
+        } else {
+            setOpenAccordionsNonSidebar(prev =>
+                isOpen ? [...prev, module] : prev.filter(m => m !== module)
+            );
+        }
+    };
 
     return (
         <Card>
@@ -108,57 +151,142 @@ export default function RolePermissionsPanel({
                             </SelectContent>
                         </Select>
                     </div>
-                    {selectedRole && (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                onClick={onExpandAll}
-                                size="sm"
-                                variant="outline"
-                                className="h-9 w-9 p-0"
-                                title={t('Expand All')}
-                            >
-                                <ChevronsDownUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                onClick={onCollapseAll}
-                                size="sm"
-                                variant="outline"
-                                className="h-9 w-9 p-0"
-                                title={t('Collapse All')}
-                            >
-                                <ChevronsUpDown className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    )}
                 </div>
                 {selectedRole && (
                     <div>
-                        <p className="text-sm text-muted-foreground">
-                            {t('Manage permissions for this role')}
-                        </p>
+                        {!canEditRole ? (
+                            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                    ⚠️ {t('You cannot edit your own role permissions')}
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                {t('Manage permissions for this role')}
+                            </p>
+                        )}
                     </div>
                 )}
             </CardHeader>
             <CardContent>
                 {selectedRole ? (
-                    <div className="space-y-4">
-                        {groupedPermissions.length > 0 ? (
-                            groupedPermissions.map((moduleData) => (
-                                <PermissionModuleCard
-                                    key={moduleData.module}
-                                    roleId={selectedRole.id}
-                                    moduleData={moduleData}
-                                    standardPermissions={standardPermissions}
-                                    isOpen={openAccordions.includes(moduleData.module)}
-                                    onOpenChange={(isOpen) => onAccordionChange(moduleData.module, isOpen)}
-                                />
-                            ))
-                        ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                                {t('No modules found.')}
+                    <Tabs defaultValue="sidebar" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="sidebar">
+                                {t('Sidebar Modules')} ({sidebarPermissions.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="non-sidebar">
+                                {t('Other Modules')} ({nonSidebarPermissions.length})
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="sidebar" className="mt-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                {/* Sidebar Preview - Left Side */}
+                                <div className="lg:col-span-1">
+                                    <SidebarPreview
+                                        navigationPreview={navigationPreview}
+                                        roleSlug={selectedRole?.slug || null}
+                                        selectedModuleWebRoot={selectedModuleWebRoot}
+                                        canEditRole={canEditRole}
+                                        onModuleClick={(webRoot) => {
+                                            setSelectedModuleWebRoot(webRoot);
+                                            // Auto-open accordion for this module
+                                            const module = sidebarPermissions.find(m => m.web_root?.replace(/^\//, '') === webRoot);
+                                            if (module && !openAccordionsSidebar.includes(module.module)) {
+                                                setOpenAccordionsSidebar(prev => [...prev, module.module]);
+                                            }
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Permissions List - Right Side */}
+                                <div className="lg:col-span-2 space-y-4">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                            onClick={() => handleExpandAll('sidebar')}
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-9 w-9 p-0"
+                                            title={t('Expand All')}
+                                        >
+                                            <ChevronsDownUp className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleCollapseAll('sidebar')}
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-9 w-9 p-0"
+                                            title={t('Collapse All')}
+                                        >
+                                            <ChevronsUpDown className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    {sidebarPermissions.length > 0 ? (
+                                        sidebarPermissions.map((moduleData) => (
+                                            <div
+                                                key={moduleData.module}
+                                                className={selectedModuleWebRoot && moduleData.web_root?.replace(/^\//, '') === selectedModuleWebRoot ? 'ring-2 ring-primary rounded-lg' : ''}
+                                            >
+                                                <PermissionModuleCard
+                                                    roleId={selectedRole.id}
+                                                    moduleData={moduleData}
+                                                    standardPermissions={standardPermissions}
+                                                    isOpen={openAccordionsSidebar.includes(moduleData.module)}
+                                                    onOpenChange={(isOpen) => handleAccordionChange(moduleData.module, isOpen, 'sidebar')}
+                                                    canEditRole={canEditRole}
+                                                />
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            {t('No modules found in sidebar.')}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        </TabsContent>
+
+                        <TabsContent value="non-sidebar" className="space-y-4 mt-4">
+                            <div className="flex items-center justify-end gap-2 mb-4">
+                                <Button
+                                    onClick={() => handleExpandAll('non-sidebar')}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 w-9 p-0"
+                                    title={t('Expand All')}
+                                >
+                                    <ChevronsDownUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    onClick={() => handleCollapseAll('non-sidebar')}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 w-9 p-0"
+                                    title={t('Collapse All')}
+                                >
+                                    <ChevronsUpDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            {nonSidebarPermissions.length > 0 ? (
+                                nonSidebarPermissions.map((moduleData) => (
+                                    <PermissionModuleCard
+                                        key={moduleData.module}
+                                        roleId={selectedRole.id}
+                                        moduleData={moduleData}
+                                        standardPermissions={standardPermissions}
+                                        isOpen={openAccordionsNonSidebar.includes(moduleData.module)}
+                                        onOpenChange={(isOpen) => handleAccordionChange(moduleData.module, isOpen, 'non-sidebar')}
+                                        canEditRole={canEditRole}
+                                    />
+                                ))
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    {t('No other modules found.')}
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
                 ) : (
                     <div className="text-center py-12 text-muted-foreground">
                         {t('Select a role to manage permissions')}

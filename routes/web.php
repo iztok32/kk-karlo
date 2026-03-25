@@ -36,6 +36,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('navigation/delete-block/{type}', [\App\Http\Controllers\Core\NavigationItemController::class, 'deleteBlock'])->name('navigation.deleteBlock');
 
     Route::resource('roles-group', \App\Http\Controllers\Core\RolesGroupController::class)->except(['create', 'edit', 'show']);
+    Route::post('roles-group/grant-visibility', [\App\Http\Controllers\Core\RolesGroupController::class, 'grantVisibility'])->name('roles-group.grant-visibility');
+    Route::post('roles-group/revoke-visibility', [\App\Http\Controllers\Core\RolesGroupController::class, 'revokeVisibility'])->name('roles-group.revoke-visibility');
+    Route::get('roles-group/{role}/available-roles', [\App\Http\Controllers\Core\RolesGroupController::class, 'getAvailableRoles'])->name('roles-group.available-roles');
+    Route::post('roles-group/reorder', [\App\Http\Controllers\Core\RolesGroupController::class, 'reorder'])->name('roles-group.reorder');
 
     Route::resource('modules-list', \App\Http\Controllers\Core\ModulesListController::class)->except(['create', 'edit', 'show']);
 
@@ -45,6 +49,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('roles-permissions', [\App\Http\Controllers\Core\RolesPermissionsController::class, 'index'])->name('roles-permissions.index');
     Route::post('roles-permissions/toggle', [\App\Http\Controllers\Core\RolesPermissionsController::class, 'togglePermission'])->name('roles-permissions.toggle');
+    Route::post('roles-permissions/toggle-navigation', [\App\Http\Controllers\Core\RolesPermissionsController::class, 'toggleNavigationVisibility'])->name('roles-permissions.toggle-navigation');
 
     Route::resource('users', \App\Http\Controllers\Core\UsersController::class)->except(['create', 'edit', 'show']);
     Route::post('users/send-password-reset', [\App\Http\Controllers\Core\UsersController::class, 'sendPasswordResetLink'])->name('users.send-password-reset');

@@ -25,9 +25,12 @@ class NavigationItemController extends Controller
             ->get()
             ->groupBy('group');
 
+        $configs = NavigationConfig::orderBy('sort_order')->get();
+
         return Inertia::render('Core/Navigation/Index', [
             'items' => $items,
             'groups' => $groups,
+            'configs' => $configs,
         ]);
     }
 

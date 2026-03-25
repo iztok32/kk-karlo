@@ -54,19 +54,22 @@ import {
 } from '@dnd-kit/sortable';
 import { SortableRow } from './Partials/SortableRow';
 
-interface Props {
-    items: NavigationItem[];
-    groups: Record<string, {
-        id: number;
-        type: string;
-        label: string;
-        group: string;
-        sort_order: number;
-        is_visible: boolean;
-    }[]>;
+interface NavigationConfig {
+    id: number;
+    type: string;
+    label: string;
+    group: string;
+    sort_order: number;
+    is_visible: boolean;
 }
 
-export default function Index({ items, groups }: Props) {
+interface Props {
+    items: NavigationItem[];
+    groups: Record<string, NavigationConfig[]>;
+    configs: NavigationConfig[];
+}
+
+export default function Index({ items, groups, configs }: Props) {
     const { t } = useTranslation();
     const [localItems, setLocalItems] = useState(items);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -458,11 +461,12 @@ export default function Index({ items, groups }: Props) {
                             {t('Configure your side menu item here. Click save when you\'re done.')}
                         </SheetDescription>
                     </SheetHeader>
-                    <NavigationForm 
-                        item={editingItem} 
-                        items={localItems} 
+                    <NavigationForm
+                        item={editingItem}
+                        items={localItems}
+                        configs={configs}
                         fixedType={activeType}
-                        onSuccess={() => setIsSheetOpen(false)} 
+                        onSuccess={() => setIsSheetOpen(false)}
                     />
                 </SheetContent>
             </Sheet>

@@ -36,6 +36,7 @@ interface Props {
     standardPermissions: string[];
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
+    canEditRole: boolean;
 }
 
 export default function PermissionModuleCard({
@@ -44,10 +45,15 @@ export default function PermissionModuleCard({
     standardPermissions,
     isOpen,
     onOpenChange,
+    canEditRole,
 }: Props) {
     const { t } = useTranslation();
 
     const handleTogglePermission = (permissionId: number) => {
+        if (!canEditRole) {
+            return; // Don't allow editing if user cannot edit this role
+        }
+
         router.post(route('roles-permissions.toggle'), {
             role_id: roleId,
             permission_id: permissionId,
@@ -119,7 +125,7 @@ export default function PermissionModuleCard({
                                                     id={`permission-${permission.id}`}
                                                     checked={permission.is_assigned}
                                                     onCheckedChange={() => handleTogglePermission(permission.id)}
-                                                    disabled={!permission.is_active}
+                                                    disabled={!permission.is_active || !canEditRole}
                                                 />
                                                 <Label
                                                     htmlFor={`permission-${permission.id}`}
@@ -153,7 +159,7 @@ export default function PermissionModuleCard({
                                                     id={`permission-${permission.id}`}
                                                     checked={permission.is_assigned}
                                                     onCheckedChange={() => handleTogglePermission(permission.id)}
-                                                    disabled={!permission.is_active}
+                                                    disabled={!permission.is_active || !canEditRole}
                                                 />
                                                 <div className="flex-1">
                                                     <Label

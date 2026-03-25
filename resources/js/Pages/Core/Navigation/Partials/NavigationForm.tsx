@@ -12,14 +12,24 @@ import { FormEventHandler, useState, useEffect } from 'react';
 // Actually, I'll try to find if there is a Select component in the project.
 // If not, I'll use a styled native select.
 
+interface NavigationConfig {
+    id: number;
+    type: string;
+    label: string;
+    group: string;
+    sort_order: number;
+    is_visible: boolean;
+}
+
 interface Props {
     item?: NavigationItem;
     items: NavigationItem[];
+    configs: NavigationConfig[];
     fixedType?: string;
     onSuccess: () => void;
 }
 
-export default function NavigationForm({ item, items, fixedType, onSuccess }: Props) {
+export default function NavigationForm({ item, items, configs, fixedType, onSuccess }: Props) {
     const { t } = useTranslation();
     const { data, setData, post, patch, processing, errors, reset } = useForm({
         parent_id: item?.parent_id || null,
@@ -35,11 +45,29 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
 
     const [metadataString, setMetadataString] = useState(JSON.stringify(item?.metadata || {}, null, 2));
 
+    // Separate state for select value (can be either a number ID or 'config_type')
+    const [selectValue, setSelectValue] = useState<string>(() => {
+        if (item?.parent_id) {
+            return String(item.parent_id);
+        }
+        return `config_${item?.type || fixedType || 'main'}`;
+    });
+
     useEffect(() => {
         if (!item) {
             setMetadataString('{}');
+            setSelectValue(`config_${fixedType || 'main'}`);
         }
-    }, [item]);
+    }, [item, fixedType]);
+
+    // Update selectValue when data changes (e.g., when type or parent_id changes programmatically)
+    useEffect(() => {
+        if (data.parent_id) {
+            setSelectValue(String(data.parent_id));
+        } else {
+            setSelectValue(`config_${data.type}`);
+        }
+    }, [data.parent_id, data.type]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -106,16 +134,89 @@ export default function NavigationForm({ item, items, fixedType, onSuccess }: Pr
                         <select
                             id="parent_id"
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={data.parent_id || ''}
-                            onChange={(e) => setData('parent_id', e.target.value ? parseInt(e.target.value) : null)}
+                            value={selectValue}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setSelectValue(value);
+
+                                // Check if value is a config type (starts with 'config_')
+                                if (value.startsWith('config_')) {
+                                    const configType = value.replace('config_', '');
+                                    // Always update type when selecting top-level config
+                                    setData({
+                                        ...data,
+                                        parent_id: null,
+                                        type: configType,
+                                    });
+                                } else {
+                                    const selectedId = value ? parseInt(value) : null;
+
+                                    // Auto-change type to match parent's type
+                                    if (selectedId) {
+                                        const selectedParent = items.find(i => i.id === selectedId);
+                                        if (selectedParent) {
+                                            // Always update type to match parent's type
+                                            setData({
+                                                ...data,
+                                                parent_id: selectedId,
+                                                type: selectedParent.type,
+                                            });
+                                        } else {
+                                            setData('parent_id', selectedId);
+                                        }
+                                    } else {
+                                        setData('parent_id', null);
+                                    }
+                                }
+                            }}
                         >
-                            <option value="">{t('None')}</option>
-                            {items.filter(i => i.id !== item?.id && i.type === data.type).map((i) => (
-                                <option key={i.id} value={i.id}>
-                                    {t(i.title_key)}
-                                </option>
-                            ))}
+                            {/* Only show main and settings types */}
+                            {['main', 'settings'].map(type => {
+                                const config = configs.find(c => c.type === type);
+
+                                // Recursively flatten all items of this type (including nested children)
+                                const flattenItems = (itemsList: NavigationItem[], level = 0): Array<{ item: NavigationItem, level: number }> => {
+                                    let result: Array<{ item: NavigationItem, level: number }> = [];
+                                    itemsList.forEach(i => {
+                                        // Skip the current editing item
+                                        if (i.id === item?.id) return;
+
+                                        // Add item if it matches the type
+                                        if (i.type === type) {
+                                            result.push({ item: i, level });
+                                        }
+
+                                        // Recursively process children
+                                        if (i.children && i.children.length > 0) {
+                                            const childResults = flattenItems(i.children, i.type === type ? level + 1 : level);
+                                            result = result.concat(childResults);
+                                        }
+                                    });
+                                    return result;
+                                };
+
+                                const flatItems = flattenItems(items);
+
+                                return (
+                                    <optgroup key={type} label="───────────────">
+                                        {/* Top level option for this type */}
+                                        <option value={`config_${type}`} style={{ fontWeight: 'bold' }}>
+                                            {config ? t(config.label) : t('Top Level')}
+                                        </option>
+
+                                        {/* All items of this type (with indentation for children) */}
+                                        {flatItems.map(({ item: i, level }) => (
+                                            <option key={i.id} value={i.id}>
+                                                {'\u00A0\u00A0'.repeat(level * 2)}{t(i.title_key)}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                );
+                            })}
                         </select>
+                        <p className="text-xs text-muted-foreground">
+                            {t('Selecting a parent will automatically change the type to match')}
+                        </p>
                     </div>
                 </div>
 

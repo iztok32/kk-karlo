@@ -18,10 +18,12 @@ class NavigationItem extends Model
         'sort_order',
         'is_active',
         'permission',
+        'allowed_roles',
     ];
 
     protected $casts = [
         'metadata' => 'array',
+        'allowed_roles' => 'array',
         'is_active' => 'boolean',
     ];
 

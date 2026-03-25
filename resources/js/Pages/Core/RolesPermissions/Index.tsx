@@ -29,38 +29,35 @@ interface ModulePermissions {
     total_count: number;
 }
 
+interface NavigationPreview {
+    configs: Record<string, string>;
+    blocks: {
+        type: string;
+        group: string;
+        label: string;
+        items: any[];
+    }[];
+}
+
 interface Props {
     roles: Role[];
     selectedRole: Role | null;
-    groupedPermissions: ModulePermissions[];
+    sidebarPermissions: ModulePermissions[];
+    nonSidebarPermissions: ModulePermissions[];
+    navigationPreview: NavigationPreview | null;
     standardPermissions: string[];
+    canEditRole: boolean;
+    isSuperAdmin: boolean;
 }
 
-export default function Index({ roles, selectedRole, groupedPermissions, standardPermissions }: Props) {
+export default function Index({ roles, selectedRole, sidebarPermissions, nonSidebarPermissions, navigationPreview, standardPermissions, canEditRole, isSuperAdmin }: Props) {
     const { t } = useTranslation();
-    const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
     const handleRoleSelect = (roleId: number) => {
         router.get(route('roles-permissions.index', { role_id: roleId }), {}, {
             preserveState: true,
             preserveScroll: true,
         });
-    };
-
-    const handleExpandAll = () => {
-        setOpenAccordions(groupedPermissions.map(g => g.module));
-    };
-
-    const handleCollapseAll = () => {
-        setOpenAccordions([]);
-    };
-
-    const handleAccordionChange = (module: string, isOpen: boolean) => {
-        setOpenAccordions(prev =>
-            isOpen
-                ? [...prev, module]
-                : prev.filter(m => m !== module)
-        );
     };
 
     return (
@@ -76,13 +73,13 @@ export default function Index({ roles, selectedRole, groupedPermissions, standar
             <RolePermissionsPanel
                 roles={roles}
                 selectedRole={selectedRole}
-                groupedPermissions={groupedPermissions}
+                sidebarPermissions={sidebarPermissions}
+                nonSidebarPermissions={nonSidebarPermissions}
+                navigationPreview={navigationPreview}
                 standardPermissions={standardPermissions}
-                openAccordions={openAccordions}
-                onExpandAll={handleExpandAll}
-                onCollapseAll={handleCollapseAll}
-                onAccordionChange={handleAccordionChange}
                 onRoleSelect={handleRoleSelect}
+                canEditRole={canEditRole}
+                isSuperAdmin={isSuperAdmin}
             />
         </AuthenticatedLayout>
     );

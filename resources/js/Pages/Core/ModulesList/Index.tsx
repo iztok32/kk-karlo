@@ -11,7 +11,8 @@ import {
     TableRow,
 } from '@/Components/ui/table';
 import { Button } from '@/Components/ui/button';
-import { Plus, Edit2, Trash2, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Search } from 'lucide-react';
+import { Input } from '@/Components/ui/input';
 import {
     Sheet,
     SheetContent,
@@ -43,14 +44,18 @@ interface Module {
 
 interface Props {
     modules: Module[];
+    filters: {
+        search: string;
+    };
 }
 
-export default function Index({ modules }: Props) {
+export default function Index({ modules, filters }: Props) {
     const { t } = useTranslation();
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingModule, setEditingModule] = useState<Module | undefined>(undefined);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [moduleToDelete, setModuleToDelete] = useState<number | null>(null);
+    const [search, setSearch] = useState(filters.search || '');
 
     const handleCreate = () => {
         setEditingModule(undefined);
@@ -78,6 +83,14 @@ export default function Index({ modules }: Props) {
         }
     };
 
+    const handleSearch = (value: string) => {
+        setSearch(value);
+        router.get(route('modules-list.index'), { search: value }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -91,10 +104,22 @@ export default function Index({ modules }: Props) {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                     <CardTitle>{t('System Modules')}</CardTitle>
-                    <Button onClick={handleCreate} size="sm" className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        {t('Add New Module')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                type="text"
+                                placeholder={t('Search modules...')}
+                                value={search}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                className="pl-8 w-[250px]"
+                            />
+                        </div>
+                        <Button onClick={handleCreate} size="sm" className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            {t('Add New Module')}
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
