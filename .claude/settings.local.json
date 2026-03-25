@@ -27,7 +27,13 @@
       "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan storage:link)",
       "Bash(dir lang /b)",
       "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:migration add_config_to_users_table)",
-      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:controller UserConfigController)"
+      "Bash(\"C:\\Users\\Iztok\\.config\\herd\\bin\\php.bat\" artisan make:controller UserConfigController)",
+      "Bash(grep -r reservation /d/Herd_ePRO/kk-karlo/app /d/Herd_ePRO/kk-karlo/resources/js --include=*.php --include=*.tsx --include=*.ts -l)",
+      "Bash(find /d/Herd_ePRO/kk-karlo/database/migrations -name *horse* -o -name *appointment*)",
+      "Bash(php artisan:*)",
+      "Bash(php.exe artisan:*)",
+      "Bash(where php:*)",
+      "Bash(\"C:/Users/iztok/.config/herd/bin/php.bat\" artisan:*)"
     ],
     "deny": [],
     "ask": []
