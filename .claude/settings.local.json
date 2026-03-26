@@ -38,7 +38,9 @@
       "Bash(php artisan:*)",
       "Bash(php.exe artisan:*)",
       "Bash(where php:*)",
-      "Bash(\"C:/Users/iztok/.config/herd/bin/php.bat\" artisan:*)"
+      "Bash(\"C:/Users/iztok/.config/herd/bin/php.bat\" artisan:*)""Bash(cat resources/js/Pages/Core/Users/Index.tsx)",
+      "Bash(cat package.json)",
+      "Bash(cat resources/js/types/index.d.ts)"
     ],
     "deny": [],
     "ask": []

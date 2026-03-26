@@ -19,12 +19,21 @@ class UsersController extends Controller
         // Get visible roles for current user
         $visibleRoles = collect();
         foreach ($currentUser->roles as $userRole) {
+            // SuperAdmin sees all roles
+            if ($userRole->isSuperAdmin()) {
+                $visibleRoles = Role::all();
+                break;
+            }
+
             $visibleRoles = $visibleRoles->merge(Role::getVisibleRolesForRole($userRole->id));
+            // Also include the user's own role
+            $visibleRoles->push($userRole);
         }
         $visibleRoles = $visibleRoles->unique('id');
-        $visibleRoleIds = $visibleRoles->pluck('id');
 
+        // Filter users based on role visibility
         $users = User::with('roles')
+            ->visibleToUser($currentUser)
             ->orderBy('name')
             ->get()
             ->map(function ($user) {
@@ -48,6 +57,8 @@ class UsersController extends Controller
 
     public function store(Request $request)
     {
+        $currentUser = request()->user();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -55,6 +66,14 @@ class UsersController extends Controller
             'is_active' => 'boolean',
             'role_id' => 'nullable|exists:roles,id',
         ]);
+
+        // Check if the role being assigned is visible to the current user
+        if (isset($validated['role_id'])) {
+            $visibleRoleIds = $this->getVisibleRoleIds($currentUser);
+            if (!$visibleRoleIds->contains($validated['role_id'])) {
+                return redirect()->back()->withErrors(['role_id' => 'You do not have permission to assign this role.']);
+            }
+        }
 
         $validated['is_active'] = $validated['is_active'] ?? true;
 
@@ -80,6 +99,17 @@ class UsersController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $currentUser = request()->user();
+
+        // Check if current user can see this user (based on their roles)
+        $canSeeUser = User::where('id', $user->id)
+            ->visibleToUser($currentUser)
+            ->exists();
+
+        if (!$canSeeUser) {
+            return redirect()->back()->withErrors(['error' => 'You do not have permission to edit this user.']);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -87,6 +117,14 @@ class UsersController extends Controller
             'is_active' => 'boolean',
             'role_id' => 'nullable|exists:roles,id',
         ]);
+
+        // Check if the role being assigned is visible to the current user
+        if (isset($validated['role_id'])) {
+            $visibleRoleIds = $this->getVisibleRoleIds($currentUser);
+            if (!$visibleRoleIds->contains($validated['role_id'])) {
+                return redirect()->back()->withErrors(['role_id' => 'You do not have permission to assign this role.']);
+            }
+        }
 
         $user->update([
             'name' => $validated['name'],
@@ -108,9 +146,20 @@ class UsersController extends Controller
 
     public function destroy(User $user)
     {
+        $currentUser = request()->user();
+
         // Prevent deleting own account
         if ($user->id === auth()->id()) {
             return redirect()->back()->withErrors(['error' => 'You cannot delete your own account.']);
+        }
+
+        // Check if current user can see this user (based on their roles)
+        $canSeeUser = User::where('id', $user->id)
+            ->visibleToUser($currentUser)
+            ->exists();
+
+        if (!$canSeeUser) {
+            return redirect()->back()->withErrors(['error' => 'You do not have permission to delete this user.']);
         }
 
         $user->delete();
@@ -120,11 +169,22 @@ class UsersController extends Controller
 
     public function sendPasswordResetLink(Request $request)
     {
+        $currentUser = request()->user();
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);
 
         $user = User::findOrFail($validated['user_id']);
+
+        // Check if current user can see this user (based on their roles)
+        $canSeeUser = User::where('id', $user->id)
+            ->visibleToUser($currentUser)
+            ->exists();
+
+        if (!$canSeeUser) {
+            return redirect()->back()->withErrors(['error' => 'You do not have permission to send password reset for this user.']);
+        }
 
         $status = Password::sendResetLink(['email' => $user->email]);
 
@@ -133,5 +193,29 @@ class UsersController extends Controller
         }
 
         return redirect()->back()->withErrors(['error' => 'Failed to send password reset link. Please try again.']);
+    }
+
+    /**
+     * Get visible role IDs for the current user
+     */
+    private function getVisibleRoleIds($currentUser)
+    {
+        $visibleRoleIds = collect();
+
+        foreach ($currentUser->roles as $userRole) {
+            // SuperAdmin sees all roles
+            if ($userRole->isSuperAdmin()) {
+                return Role::pluck('id');
+            }
+
+            $visibleRoleIds = $visibleRoleIds->merge(
+                Role::getVisibleRolesForRole($userRole->id)->pluck('id')
+            );
+
+            // Also include the user's own role
+            $visibleRoleIds->push($userRole->id);
+        }
+
+        return $visibleRoleIds->unique();
     }
 }

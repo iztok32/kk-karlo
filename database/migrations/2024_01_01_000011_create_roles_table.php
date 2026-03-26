@@ -11,8 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('roles', function (Blueprint $table) {
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('slug')->unique();
+            $table->integer('display_order')->default(0);
             $table->foreignId('created_by_role_id')->nullable()->constrained('roles')->onDelete('set null');
+            $table->timestamps();
+            $table->softDeletes();
         });
     }
 
@@ -21,9 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('roles', function (Blueprint $table) {
-            $table->dropForeign(['created_by_role_id']);
-            $table->dropColumn('created_by_role_id');
-        });
+        Schema::dropIfExists('roles');
     }
 };

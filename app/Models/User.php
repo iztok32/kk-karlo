@@ -111,4 +111,50 @@ class User extends Authenticatable implements AuditableContract
         $this->config = $config;
         $this->save();
     }
+
+    /**
+     * Scope to filter users by roles visible to the current user
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param User|null $currentUser - The user whose visible roles to check
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeVisibleToUser($query, $currentUser = null)
+    {
+        if (!$currentUser) {
+            return $query->whereRaw('1 = 0'); // Return empty result
+        }
+
+        // Get all visible role IDs for the current user
+        $visibleRoleIds = collect();
+
+        foreach ($currentUser->roles as $userRole) {
+            // SuperAdmin sees all users
+            if ($userRole->isSuperAdmin()) {
+                return $query;
+            }
+
+            // Get visible roles for this role
+            $rolesForThisRole = Role::getVisibleRolesForRole($userRole->id);
+            $visibleRoleIds = $visibleRoleIds->merge($rolesForThisRole->pluck('id'));
+
+            // Also include the user's own role so they can see users with same role
+            $visibleRoleIds->push($userRole->id);
+        }
+
+        $visibleRoleIds = $visibleRoleIds->unique();
+
+        // If no visible roles, only show users without any roles
+        if ($visibleRoleIds->isEmpty()) {
+            return $query->doesntHave('roles');
+        }
+
+        // Show users that have at least one role that is visible
+        // AND don't have any roles that are NOT visible
+        return $query->whereHas('roles', function ($q) use ($visibleRoleIds) {
+            $q->whereIn('roles.id', $visibleRoleIds);
+        })->whereDoesntHave('roles', function ($q) use ($visibleRoleIds) {
+            $q->whereNotIn('roles.id', $visibleRoleIds);
+        });
+    }
 }

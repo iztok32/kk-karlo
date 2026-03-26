@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('modules', function (Blueprint $table) {
+        Schema::create('navigation_configs', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique(); // e.g., "users", "roles", "navigation"
-            $table->string('web_root')->nullable(); // e.g., "/users", "/roles-group"
-            $table->text('description')->nullable();
+            $table->string('type')->unique();
+            $table->string('group')->nullable();
+            $table->integer('sort_order')->default(0);
+            $table->string('label');
+            $table->boolean('is_visible')->default(true);
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('modules');
+        Schema::dropIfExists('navigation_configs');
     }
 };

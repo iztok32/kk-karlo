@@ -47,6 +47,13 @@ export type PageProps<
         teams: NavigationItem[];
         projects: NavigationItem[];
     };
+    flash?: {
+        success?: string;
+        error?: string;
+        warning?: string;
+        info?: string;
+        permission_denied?: boolean;
+    };
 };
 
 declare global {

@@ -11,7 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('navigation_items', function (Blueprint $table) {
+        Schema::create('modules', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->unique();
+            $table->string('web_root')->nullable();
+            $table->text('description')->nullable();
+            $table->timestamps();
             $table->softDeletes();
         });
     }
@@ -21,8 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('navigation_items', function (Blueprint $table) {
-            $table->dropSoftDeletes();
-        });
+        Schema::dropIfExists('modules');
     }
 };

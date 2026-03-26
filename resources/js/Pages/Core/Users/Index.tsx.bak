@@ -1,12 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import { Input } from '@/Components/ui/input';
-import { Plus, Edit2, Trash2, Mail, Check, X, Search } from 'lucide-react';
-import { PageProps } from '@/types';
+import { Plus, Edit2, Trash2, Mail, Check, X } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -56,19 +54,10 @@ interface Props {
 
 export default function Index({ users, roles }: Props) {
     const { t } = useTranslation();
-    const { auth } = usePage<PageProps>().props;
-    const userPermissions = auth.user?.permissions || [];
-
-    // Check permissions
-    const canCreate = userPermissions.includes('users.create');
-    const canEdit = userPermissions.includes('users.edit');
-    const canDelete = userPermissions.includes('users.delete');
-
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
 
     const handleCreate = () => {
         setEditingUser(undefined);
@@ -107,16 +96,6 @@ export default function Index({ users, roles }: Props) {
         });
     };
 
-    // Filter users based on search query
-    const filteredUsers = users.filter(user => {
-        const query = searchQuery.toLowerCase();
-        return (
-            user.name.toLowerCase().includes(query) ||
-            user.email.toLowerCase().includes(query) ||
-            user.roles.some(role => role.toLowerCase().includes(query))
-        );
-    });
-
     return (
         <AuthenticatedLayout
             header={
@@ -131,23 +110,10 @@ export default function Index({ users, roles }: Props) {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                         <CardTitle>{t('Users')}</CardTitle>
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder={t('Search users...')}
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-8 w-64"
-                                />
-                            </div>
-                            {canCreate && (
-                                <Button onClick={handleCreate} size="sm" className="gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    {t('Add User')}
-                                </Button>
-                            )}
-                        </div>
+                        <Button onClick={handleCreate} size="sm" className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            {t('Add User')}
+                        </Button>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -161,8 +127,8 @@ export default function Index({ users, roles }: Props) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredUsers.length > 0 ? (
-                                    filteredUsers.map((user) => (
+                                {users.length > 0 ? (
+                                    users.map((user) => (
                                         <TableRow key={user.id} className={user.deleted_at ? 'opacity-50' : ''}>
                                             <TableCell className="font-medium">{user.name}</TableCell>
                                             <TableCell>{user.email}</TableCell>
@@ -194,42 +160,29 @@ export default function Index({ users, roles }: Props) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    {canEdit && (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleSendPasswordReset(user.id)}
-                                                                title={t('Send Password Reset Link')}
-                                                            >
-                                                                <Mail className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleEdit(user)}
-                                                                title={t('Edit User')}
-                                                            >
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    {canDelete && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(user.id)}
-                                                            className="text-destructive hover:text-destructive"
-                                                            title={t('Delete User')}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                    {!canEdit && !canDelete && (
-                                                        <span className="text-muted-foreground text-sm">
-                                                            {t('No actions available')}
-                                                        </span>
-                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleSendPasswordReset(user.id)}
+                                                        title={t('Send Password Reset Link')}
+                                                    >
+                                                        <Mail className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEdit(user)}
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(user.id)}
+                                                        className="text-destructive hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

@@ -14,15 +14,17 @@ return new class extends Migration
         Schema::create('navigation_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('parent_id')->nullable()->constrained('navigation_items')->onDelete('cascade');
-            $table->string('type')->default('main'); // main, project, team
+            $table->string('type')->default('main');
             $table->string('title_key');
             $table->string('url')->nullable();
             $table->string('icon')->nullable();
-            $table->jsonb('metadata')->nullable(); // Za specifične podatke kot je "plan"
+            $table->jsonb('metadata')->nullable();
             $table->integer('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->string('permission')->nullable();
+            $table->jsonb('allowed_roles')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -36,11 +36,24 @@ Route::middleware('auth')->group(function () {
     Route::post('navigation/add-block', [\App\Http\Controllers\Core\NavigationItemController::class, 'addBlock'])->name('navigation.addBlock');
     Route::delete('navigation/delete-block/{type}', [\App\Http\Controllers\Core\NavigationItemController::class, 'deleteBlock'])->name('navigation.deleteBlock');
 
-    Route::resource('roles-group', \App\Http\Controllers\Core\RolesGroupController::class)->except(['create', 'edit', 'show']);
-    Route::post('roles-group/grant-visibility', [\App\Http\Controllers\Core\RolesGroupController::class, 'grantVisibility'])->name('roles-group.grant-visibility');
-    Route::post('roles-group/revoke-visibility', [\App\Http\Controllers\Core\RolesGroupController::class, 'revokeVisibility'])->name('roles-group.revoke-visibility');
-    Route::get('roles-group/{role}/available-roles', [\App\Http\Controllers\Core\RolesGroupController::class, 'getAvailableRoles'])->name('roles-group.available-roles');
-    Route::post('roles-group/reorder', [\App\Http\Controllers\Core\RolesGroupController::class, 'reorder'])->name('roles-group.reorder');
+    // RolesGroup routes with permission middleware
+    Route::middleware('permission:roles-group.view')->group(function () {
+        Route::get('roles-group', [\App\Http\Controllers\Core\RolesGroupController::class, 'index'])->name('roles-group.index');
+        Route::get('roles-group/{role}/available-roles', [\App\Http\Controllers\Core\RolesGroupController::class, 'getAvailableRoles'])->name('roles-group.available-roles');
+    });
+    Route::middleware('permission:roles-group.create')->group(function () {
+        Route::post('roles-group', [\App\Http\Controllers\Core\RolesGroupController::class, 'store'])->name('roles-group.store');
+    });
+    Route::middleware('permission:roles-group.edit')->group(function () {
+        Route::put('roles-group/{roles_group}', [\App\Http\Controllers\Core\RolesGroupController::class, 'update'])->name('roles-group.update');
+        Route::patch('roles-group/{roles_group}', [\App\Http\Controllers\Core\RolesGroupController::class, 'update']);
+        Route::post('roles-group/grant-visibility', [\App\Http\Controllers\Core\RolesGroupController::class, 'grantVisibility'])->name('roles-group.grant-visibility');
+        Route::post('roles-group/revoke-visibility', [\App\Http\Controllers\Core\RolesGroupController::class, 'revokeVisibility'])->name('roles-group.revoke-visibility');
+        Route::post('roles-group/reorder', [\App\Http\Controllers\Core\RolesGroupController::class, 'reorder'])->name('roles-group.reorder');
+    });
+    Route::middleware('permission:roles-group.delete')->group(function () {
+        Route::delete('roles-group/{roles_group}', [\App\Http\Controllers\Core\RolesGroupController::class, 'destroy'])->name('roles-group.destroy');
+    });
 
     Route::resource('modules-list', \App\Http\Controllers\Core\ModulesListController::class)->except(['create', 'edit', 'show']);
 
@@ -52,8 +65,21 @@ Route::middleware('auth')->group(function () {
     Route::post('roles-permissions/toggle', [\App\Http\Controllers\Core\RolesPermissionsController::class, 'togglePermission'])->name('roles-permissions.toggle');
     Route::post('roles-permissions/toggle-navigation', [\App\Http\Controllers\Core\RolesPermissionsController::class, 'toggleNavigationVisibility'])->name('roles-permissions.toggle-navigation');
 
-    Route::resource('users', \App\Http\Controllers\Core\UsersController::class)->except(['create', 'edit', 'show']);
-    Route::post('users/send-password-reset', [\App\Http\Controllers\Core\UsersController::class, 'sendPasswordResetLink'])->name('users.send-password-reset');
+    // Users routes with permission middleware
+    Route::middleware('permission:users.view')->group(function () {
+        Route::get('users', [\App\Http\Controllers\Core\UsersController::class, 'index'])->name('users.index');
+    });
+    Route::middleware('permission:users.create')->group(function () {
+        Route::post('users', [\App\Http\Controllers\Core\UsersController::class, 'store'])->name('users.store');
+    });
+    Route::middleware('permission:users.edit')->group(function () {
+        Route::put('users/{user}', [\App\Http\Controllers\Core\UsersController::class, 'update'])->name('users.update');
+        Route::patch('users/{user}', [\App\Http\Controllers\Core\UsersController::class, 'update']);
+        Route::post('users/send-password-reset', [\App\Http\Controllers\Core\UsersController::class, 'sendPasswordResetLink'])->name('users.send-password-reset');
+    });
+    Route::middleware('permission:users.delete')->group(function () {
+        Route::delete('users/{user}', [\App\Http\Controllers\Core\UsersController::class, 'destroy'])->name('users.destroy');
+    });
 
     Route::get('audit-log', [\App\Http\Controllers\Core\AuditLogController::class, 'index'])->name('audit-log.index');
     Route::get('audit-log/{audit}', [\App\Http\Controllers\Core\AuditLogController::class, 'show'])->name('audit-log.show');

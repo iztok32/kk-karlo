@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
+import { PageProps } from '@/types';
 import { useState } from 'react';
 import {
     Table,
@@ -11,7 +12,8 @@ import {
     TableRow,
 } from '@/Components/ui/table';
 import { Button } from '@/Components/ui/button';
-import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Input } from '@/Components/ui/input';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Search } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -66,6 +68,14 @@ interface Props {
 
 export default function Index({ roles, userRoles }: Props) {
     const { t } = useTranslation();
+    const { auth } = usePage<PageProps>().props;
+    const userPermissions = auth.user?.permissions || [];
+
+    // Check permissions
+    const canCreate = userPermissions.includes('roles-group.create');
+    const canEdit = userPermissions.includes('roles-group.edit');
+    const canDelete = userPermissions.includes('roles-group.delete');
+
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingRole, setEditingRole] = useState<Role | undefined>(undefined);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -74,6 +84,7 @@ export default function Index({ roles, userRoles }: Props) {
     const [managingVisibilityRole, setManagingVisibilityRole] = useState<Role | null>(null);
     const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
     const [localRoles, setLocalRoles] = useState<Role[]>(roles);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -207,6 +218,15 @@ export default function Index({ roles, userRoles }: Props) {
         });
     };
 
+    // Filter roles based on search query
+    const filteredRoles = localRoles.filter(role => {
+        const query = searchQuery.toLowerCase();
+        return (
+            role.name.toLowerCase().includes(query) ||
+            role.slug.toLowerCase().includes(query)
+        );
+    });
+
     return (
         <AuthenticatedLayout
             header={
@@ -219,11 +239,24 @@ export default function Index({ roles, userRoles }: Props) {
 
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                    <CardTitle>{t('User Roles')}</CardTitle>
-                    <Button onClick={handleCreate} size="sm" className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        {t('Add New Role')}
-                    </Button>
+                    <CardTitle>{t('Roles Groups')}</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={t('Search roles...')}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-8 w-64"
+                            />
+                        </div>
+                        {canCreate && (
+                            <Button onClick={handleCreate} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" />
+                                {t('Add New Role')}
+                            </Button>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
@@ -244,11 +277,11 @@ export default function Index({ roles, userRoles }: Props) {
                                 onDragEnd={handleDragEnd}
                             >
                                 <SortableContext
-                                    items={localRoles.map((r) => r.id)}
+                                    items={filteredRoles.map((r) => r.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
-                                    {localRoles.length > 0 ? (
-                                        localRoles.map((role) => (
+                                    {filteredRoles.length > 0 ? (
+                                        filteredRoles.map((role) => (
                                             <SortableRoleRow key={role.id} id={role.id}>
                                                 <TableCell className="font-medium">{role.name}</TableCell>
                                                 <TableCell>
@@ -278,31 +311,42 @@ export default function Index({ roles, userRoles }: Props) {
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleManageVisibility(role)}
-                                                            className="h-8 w-8"
-                                                            title={t('Manage Visibility')}
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleEdit(role)}
-                                                            className="h-8 w-8"
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(role.id)}
-                                                            className="h-8 w-8 text-destructive hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                        {canEdit && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleManageVisibility(role)}
+                                                                className="h-8 w-8"
+                                                                title={t('Manage Visibility')}
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                        {canEdit && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleEdit(role)}
+                                                                className="h-8 w-8"
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                        {canDelete && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDelete(role.id)}
+                                                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                        {!canEdit && !canDelete && (
+                                                            <span className="text-muted-foreground text-sm">
+                                                                {t('No actions available')}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </SortableRoleRow>
