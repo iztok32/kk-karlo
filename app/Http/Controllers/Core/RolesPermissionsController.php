@@ -72,9 +72,9 @@ class RolesPermissionsController extends Controller
         if ($isSuperAdmin) {
             $modulesWithPermissions = Module::orderBy('name')->get();
         } else {
-            // Get unique module names from current user's permissions
-            $userModules = $permissions->pluck('module')->unique();
-            $modulesWithPermissions = Module::whereIn('name', $userModules)
+            // Get unique lowercased module names from current user's permissions
+            $userModules = $permissions->pluck('module')->map(fn($m) => strtolower($m))->unique();
+            $modulesWithPermissions = Module::whereIn(DB::raw('LOWER(name)'), $userModules)
                 ->orderBy('name')
                 ->get();
         }

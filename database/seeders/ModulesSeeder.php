@@ -20,6 +20,11 @@ class ModulesSeeder extends Seeder
             ['id' => 10, 'name' => 'modules-list', 'web_root' => '/modules-list', 'description' => 'Seznam modulov', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 11, 'name' => 'roles-permissions', 'web_root' => '/roles-permissions', 'description' => 'Pravice ki so na voljo za posamezne module.', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 12, 'name' => 'notifications', 'web_root' => '/notifications', 'description' => 'Pošiljanje obvestil, emailov in SMS sporočil', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 13, 'name' => 'horses', 'web_root' => '/horses', 'description' => 'Seznam konj v klubu.', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 14, 'name' => 'news', 'web_root' => '/news', 'description' => 'Novice in obvestila za člane kluba.', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 15, 'name' => 'horseman', 'web_root' => '/horseman', 'description' => 'Tipi jahačev.', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 16, 'name' => 'appointment', 'web_root' => '/appointment', 'description' => 'Termini za jahanje.', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 17, 'name' => 'reservations', 'web_root' => '/reservations', 'description' => 'Rezervacije terminov za jahanje.', 'created_at' => now(), 'updated_at' => now()],
         ];
 
         foreach ($modules as $module) {

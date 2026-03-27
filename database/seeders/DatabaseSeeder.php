@@ -28,6 +28,15 @@ class DatabaseSeeder extends Seeder
         // 5. Navigation Items - zadnja, ker reference permissions in navigation_configs
         $this->call(NavigationSeeder::class);
 
+        $this->call(HorseNavigationSeeder::class);
+
+        $this->call(HorsePermissionSeeder::class);
+
+        // 6. Club modules - news, horseman, appointment, reservations
+        $this->call(ClubPermissionsSeeder::class);
+
+        $this->call(ClubNavigationSeeder::class);
+
         $this->command->info('');
         $this->command->info('========================================');
         $this->command->info('All seeders completed successfully!');

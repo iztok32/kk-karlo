@@ -10,7 +10,7 @@ class HorsePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $module = 'Horses';
+        $module = 'horses';
         
         $permissions = [
             ['name' => 'View Horses', 'slug' => 'horses.view', 'module' => $module],
@@ -23,10 +23,15 @@ class HorsePermissionSeeder extends Seeder
             Permission::updateOrCreate(['slug' => $permission['slug']], $permission);
         }
 
-        // Assign to Administrator role if it exists
-        $adminRole = Role::where('slug', 'administrator')->first();
+        $allHorsePermissions = Permission::where('module', $module)->get();
+
+        $superadminRole = Role::where('slug', 'superadmin')->first();
+        if ($superadminRole) {
+            $superadminRole->permissions()->syncWithoutDetaching($allHorsePermissions->pluck('id'));
+        }
+
+        $adminRole = Role::where('slug', 'admin')->first();
         if ($adminRole) {
-            $allHorsePermissions = Permission::where('module', $module)->get();
             $adminRole->permissions()->syncWithoutDetaching($allHorsePermissions->pluck('id'));
         }
     }

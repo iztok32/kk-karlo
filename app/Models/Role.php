@@ -68,8 +68,8 @@ class Role extends Model implements AuditableContract
             return static::all();
         }
 
-        // Start with empty collection (role should NOT see itself, only children)
-        $visibleRoleIds = collect();
+        // Start with collection including the role itself
+        $visibleRoleIds = collect([$roleId]);
 
         // Get directly created roles
         $directlyCreated = static::where('created_by_role_id', $roleId)->pluck('id');
@@ -94,7 +94,7 @@ class Role extends Model implements AuditableContract
 
         foreach ($childRoles as $childRole) {
             // Check if child role has permission to create roles
-            if ($childRole->hasPermissionTo('roles-groups.create')) {
+            if ($childRole->hasPermissionTo('roles-group.create')) {
                 $childCreated = static::where('created_by_role_id', $childRole->id)->pluck('id');
                 $visibleRoleIds = $visibleRoleIds->merge($childCreated);
 
