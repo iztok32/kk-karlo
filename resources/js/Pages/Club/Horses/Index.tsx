@@ -1,417 +1,219 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/Components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/Components/ui/dialog';
 import { Input } from '@/Components/ui/input';
-import { Label } from '@/Components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/Components/ui/table';
 import { useForm, Head } from '@inertiajs/react';
-import React, { useState, useEffect, FormEvent } from 'react';
-import { Pencil, Trash2, Plus, Check, X, GripVertical, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Check, X, LayoutGrid, LayoutList } from 'lucide-react';
 import { Switch } from '@/Components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
-import { 
-  DndContext, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors,
-  DragEndEvent
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-
-interface Horse {
-  id: number;
-  name: string;
-  year: number;
-  display_order: number;
-  is_active: boolean;
-}
+import { Horse } from './types';
+import HorseTable from './Partials/HorseTable';
+import HorseCardView from './Partials/HorseCardView';
+import HorseFormDialog from './Partials/HorseFormDialog';
+import HorseImageManager from './Partials/HorseImageManager';
+import DeleteConfirmDialog from './Partials/DeleteConfirmDialog';
 
 interface Props {
-  horses: Horse[];
-}
-
-function SortableRow({ 
-  horse, 
-  onEdit, 
-  onDelete 
-}: { 
-  horse: Horse; 
-  onEdit: (horse: Horse) => void; 
-  onDelete: (horse: Horse) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: horse.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 1 : 0,
-    position: 'relative' as const,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <TableRow ref={setNodeRef} style={style}>
-      <TableCell className="w-10">
-        <button
-          type="button"
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4 text-gray-400" />
-        </button>
-      </TableCell>
-      <TableCell className="font-medium">{horse.name}</TableCell>
-      <TableCell className="text-center">{horse.year}</TableCell>
-      <TableCell>
-        <div className="flex justify-center">
-          {horse.is_active ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <X className="h-4 w-4 text-red-500" />
-          )}
-        </div>
-      </TableCell>
-      <TableCell className="w-[100px] text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(horse)}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-          onClick={() => onDelete(horse)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
+    horses: Horse[];
 }
 
 export default function Index({ horses: initialHorses }: Props) {
-  const { t } = useTranslation();
-  const [localHorses, setLocalHorses] = useState(initialHorses);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
-  const [horseToDelete, setHorseToDelete] = useState<Horse | null>(null);
-  const [showActive, setShowActive] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+    const { t } = useTranslation();
+    const [localHorses, setLocalHorses] = useState(initialHorses);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+    const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
+    const [managingImagesHorse, setManagingImagesHorse] = useState<Horse | null>(null);
+    const [horseToDelete, setHorseToDelete] = useState<Horse | null>(null);
+    const [showActive, setShowActive] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  const filteredHorses = localHorses.filter(h => {
-    const matchesStatus = h.is_active === showActive;
-    const matchesSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
-
-  useEffect(() => {
-    setLocalHorses(initialHorses);
-  }, [initialHorses]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
-    name: '',
-    year: new Date().getFullYear(),
-    is_active: true,
-  });
-
-  const openAddDialog = () => {
-    setEditingHorse(null);
-    reset();
-    clearErrors();
-    setIsDialogOpen(true);
-  };
-
-  const openEditDialog = (horse: Horse) => {
-    setEditingHorse(horse);
-    setData({
-      name: horse.name,
-      year: horse.year,
-      is_active: horse.is_active,
+    const filteredHorses = localHorses.filter(h => {
+        const matchesStatus = h.is_active === showActive;
+        const matchesSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesStatus && matchesSearch;
     });
-    clearErrors();
-    setIsDialogOpen(true);
-  };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    useEffect(() => {
+        setLocalHorses(initialHorses);
 
-    if (over && active.id !== over.id) {
-      const oldIndex = localHorses.findIndex((h) => h.id === active.id);
-      const newIndex = localHorses.findIndex((h) => h.id === over.id);
+        // Update managingImagesHorse if it exists and horses data changed
+        if (managingImagesHorse) {
+            const updatedHorse = initialHorses.find(h => h.id === managingImagesHorse.id);
+            if (updatedHorse) {
+                setManagingImagesHorse(updatedHorse);
+            }
+        }
+    }, [initialHorses]);
 
-      const newOrder = arrayMove(localHorses, oldIndex, newIndex);
-      setLocalHorses(newOrder);
-
-      const ids = newOrder.map((h) => h.id);
-      router.post(route('horses.reorder'), { ids }, {
-        preserveScroll: true,
-        preserveState: true,
-      });
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const options = {
-      onSuccess: () => {
-        setIsDialogOpen(false);
-        reset();
-      },
-      onError: (errors: any) => {
-        console.error('Submission errors:', errors);
-      },
-      preserveState: true,
-      preserveScroll: true,
+    const openAddDialog = () => {
+        setEditingHorse(null);
+        setIsDialogOpen(true);
     };
 
-    if (editingHorse) {
-      put(route('horses.update', { horse: editingHorse.id }), options);
-    } else {
-      post(route('horses.store'), options);
-    }
-  };
+    const openEditDialog = (horse: Horse) => {
+        setEditingHorse(horse);
+        setIsDialogOpen(true);
+    };
 
-  const handleDelete = (horse: Horse) => {
-    setHorseToDelete(horse);
-    setIsDeleteDialogOpen(true);
-  };
+    const openManageImagesDialog = (horse: Horse) => {
+        setManagingImagesHorse(horse);
+        setIsImageDialogOpen(true);
+    };
 
-  const confirmDelete = () => {
-    if (horseToDelete) {
-      destroy(route('horses.destroy', { horse: horseToDelete.id }), {
-        onSuccess: () => setIsDeleteDialogOpen(false),
-      });
-    }
-  };
+    const handleDelete = (horse: Horse) => {
+        setHorseToDelete(horse);
+        setIsDeleteDialogOpen(true);
+    };
 
-  return (
-    <AuthenticatedLayout
-      header={
-        <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-          {t('Horse Management')}
-        </h2>
-      }
-    >
-      <Head title={t('Horses')} />
+    const handleReorder = (reorderedHorses: Horse[]) => {
+        setLocalHorses(reorderedHorses);
+    };
 
-      <div className="py-12">
-        <div className="mx-auto w-full sm:px-6 lg:px-8">
-          <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-            <div className="p-6 text-gray-900 dark:text-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">{t('Horse List')}</h3>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-64">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder={t('Search horses...')}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="relative inline-flex items-center">
-                        <Switch 
-                          checked={showActive}
-                          onCheckedChange={setShowActive}
-                          className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
-                        />
-                        <X className={cn(
-                          "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
-                          showActive ? "opacity-0" : "opacity-100"
-                        )} />
-                        <Check className={cn(
-                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
-                          showActive ? "opacity-100" : "opacity-0"
-                        )} />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('Show active/inactive horses')}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button onClick={openAddDialog}>
-                    <Plus className="mr-2 h-4 w-4" /> {t('Add Horse')}
-                  </Button>
+    return (
+        <AuthenticatedLayout
+            header={
+                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    {t('Horse Management')}
+                </h2>
+            }
+        >
+            <Head title={t('Horses')} />
+
+            <div className="py-12">
+                <div className="mx-auto w-full sm:px-6 lg:px-8">
+                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                        <div className="p-6 text-gray-900 dark:text-gray-100">
+                            {/* Header with filters and actions */}
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <h3 className="text-lg font-medium">{t('Horse List')}</h3>
+
+                                <div className="flex flex-wrap items-center gap-3">
+                                    {/* Search */}
+                                    <div className="relative w-64">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder={t('Search horses...')}
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+
+                                    {/* Active/Inactive Toggle */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="relative inline-flex items-center">
+                                                <Switch
+                                                    checked={showActive}
+                                                    onCheckedChange={setShowActive}
+                                                    className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                                                />
+                                                <X className={cn(
+                                                    "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
+                                                    showActive ? "opacity-0" : "opacity-100"
+                                                )} />
+                                                <Check className={cn(
+                                                    "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
+                                                    showActive ? "opacity-100" : "opacity-0"
+                                                )} />
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {t('Show active/inactive horses')}
+                                        </TooltipContent>
+                                    </Tooltip>
+
+                                    {/* View Mode Toggle */}
+                                    <div className="flex items-center border rounded-md">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant={viewMode === 'table' ? 'default' : 'ghost'}
+                                                    size="sm"
+                                                    onClick={() => setViewMode('table')}
+                                                    className="rounded-r-none"
+                                                >
+                                                    <LayoutList className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t('Table View')}</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                                                    size="sm"
+                                                    onClick={() => setViewMode('cards')}
+                                                    className="rounded-l-none"
+                                                >
+                                                    <LayoutGrid className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t('Card View')}</TooltipContent>
+                                        </Tooltip>
+                                    </div>
+
+                                    {/* Add Horse Button */}
+                                    <Button onClick={openAddDialog}>
+                                        <Plus className="mr-2 h-4 w-4" /> {t('Add Horse')}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* View Content */}
+                            {viewMode === 'table' ? (
+                                <HorseTable
+                                    horses={filteredHorses}
+                                    onEdit={openEditDialog}
+                                    onDelete={handleDelete}
+                                    onManageImages={openManageImagesDialog}
+                                    onReorder={handleReorder}
+                                />
+                            ) : (
+                                <HorseCardView
+                                    horses={filteredHorses}
+                                    onEdit={openEditDialog}
+                                    onDelete={handleDelete}
+                                    onManageImages={openManageImagesDialog}
+                                />
+                            )}
+
+                            {/* Empty State */}
+                            {filteredHorses.length === 0 && (
+                                <div className="text-center py-12 text-muted-foreground">
+                                    {searchTerm
+                                        ? t('No horses found matching ":search".', { search: searchTerm })
+                                        : (showActive ? t('No active horses found.') : t('No inactive horses found.'))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-              </div>
-
-              <div className="rounded-md border">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10"></TableHead>
-                        <TableHead>{t('Name')}</TableHead>
-                        <TableHead className="w-[100px] text-center">{t('Year')}</TableHead>
-                        <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
-                        <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredHorses.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-4 text-muted-foreground italic">
-                            {searchTerm 
-                              ? t('No horses found matching ":search".', { search: searchTerm }) 
-                              : (showActive ? t('No active horses found.') : t('No inactive horses found.'))}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        <SortableContext
-                          items={filteredHorses.map((h) => h.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {filteredHorses.map((horse) => (
-                            <SortableRow
-                              key={horse.id}
-                              horse={horse}
-                              onEdit={openEditDialog}
-                              onDelete={handleDelete}
-                            />
-                          ))}
-                        </SortableContext>
-                      )}
-                    </TableBody>
-                  </Table>
-                </DndContext>
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>{editingHorse ? t('Edit Horse') : t('Add Horse')}</DialogTitle>
-              <DialogDescription>
-                {t('Enter horse details below. Click save when finished.')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">{t('Horse Name')}</Label>
-                <Input
-                  id="name"
-                  value={data.name}
-                  onChange={(e) => setData('name', e.target.value)}
-                  className={errors.name ? 'border-red-500' : ''}
-                />
-                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="year">{t('Year of Birth')}</Label>
-                <Input
-                  id="year"
-                  type="number"
-                  value={data.year || ''}
-                  onChange={(e) => setData('year', e.target.value ? parseInt(e.target.value) : 0)}
-                  className={errors.year ? 'border-red-500' : ''}
-                />
-                {errors.year && <p className="text-sm text-red-500">{errors.year}</p>}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={data.is_active}
-                  onCheckedChange={(checked) => setData('is_active', checked)}
-                />
-                <Label htmlFor="is_active">{t('Active')}</Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                {t('Cancel')}
-              </Button>
-              <Button type="submit" disabled={processing}>
-                {editingHorse ? t('Update') : t('Save')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            {/* Dialogs */}
+            <HorseFormDialog
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                editingHorse={editingHorse}
+            />
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{t('Delete Horse')}</DialogTitle>
-            <DialogDescription>
-              {t('Are you sure you want to delete horse :name?', { name: horseToDelete?.name || '' })} {t('This action cannot be undone.')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              {t('Cancel')}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={processing}
-            >
-              {t('Delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </AuthenticatedLayout>
-  );
+            <DeleteConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                horse={horseToDelete}
+            />
+
+            <HorseImageManager
+                isOpen={isImageDialogOpen}
+                onClose={() => setIsImageDialogOpen(false)}
+                horse={managingImagesHorse}
+            />
+        </AuthenticatedLayout>
+    );
 }

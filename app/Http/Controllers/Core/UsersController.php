@@ -52,6 +52,9 @@ class UsersController extends Controller
         return Inertia::render('Core/Users/Index', [
             'users' => $users,
             'roles' => $visibleRoles->values(),
+            'horsemanTypes' => \App\Models\HorsemanType::where('is_active', true)
+                ->orderBy('display_order')
+                ->get(['id', 'name']),
         ]);
     }
 
@@ -65,6 +68,23 @@ class UsersController extends Controller
             'gsm_number' => 'nullable|string|max:20',
             'is_active' => 'boolean',
             'role_id' => 'nullable|exists:roles,id',
+            // Profile fields
+            'address' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|regex:/^\d{4}$/|max:4',
+            'city' => 'nullable|string|max:100',
+            'date_of_birth' => 'nullable|date|before:today',
+            'username' => 'nullable|string|regex:/^[a-zA-Z0-9_]+$/|max:50|unique:users',
+            'home_phone' => 'nullable|string|max:20',
+            'work_phone' => 'nullable|string|max:20',
+            'fax' => 'nullable|string|max:20',
+            'gsm_number_public' => 'boolean',
+            'home_phone_public' => 'boolean',
+            'work_phone_public' => 'boolean',
+            'fax_public' => 'boolean',
+            'horseman_type_id' => 'nullable|exists:horseman_type,id',
+            'is_member' => 'boolean',
+            'membership_paid' => 'boolean',
+            'notify_free_slots' => 'boolean',
         ]);
 
         // Check if the role being assigned is visible to the current user
@@ -116,6 +136,23 @@ class UsersController extends Controller
             'gsm_number' => 'nullable|string|max:20',
             'is_active' => 'boolean',
             'role_id' => 'nullable|exists:roles,id',
+            // Profile fields
+            'address' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|regex:/^\d{4}$/|max:4',
+            'city' => 'nullable|string|max:100',
+            'date_of_birth' => 'nullable|date|before:today',
+            'username' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9_]+$/', 'max:50', Rule::unique('users')->ignore($user->id)],
+            'home_phone' => 'nullable|string|max:20',
+            'work_phone' => 'nullable|string|max:20',
+            'fax' => 'nullable|string|max:20',
+            'gsm_number_public' => 'boolean',
+            'home_phone_public' => 'boolean',
+            'work_phone_public' => 'boolean',
+            'fax_public' => 'boolean',
+            'horseman_type_id' => 'nullable|exists:horseman_type,id',
+            'is_member' => 'boolean',
+            'membership_paid' => 'boolean',
+            'notify_free_slots' => 'boolean',
         ]);
 
         // Check if the role being assigned is visible to the current user
@@ -131,6 +168,23 @@ class UsersController extends Controller
             'email' => $validated['email'],
             'gsm_number' => $validated['gsm_number'] ?? $user->gsm_number,
             'is_active' => $validated['is_active'] ?? $user->is_active,
+            // Profile fields
+            'address' => $validated['address'] ?? $user->address,
+            'postal_code' => $validated['postal_code'] ?? $user->postal_code,
+            'city' => $validated['city'] ?? $user->city,
+            'date_of_birth' => $validated['date_of_birth'] ?? $user->date_of_birth,
+            'username' => $validated['username'] ?? $user->username,
+            'home_phone' => $validated['home_phone'] ?? $user->home_phone,
+            'work_phone' => $validated['work_phone'] ?? $user->work_phone,
+            'fax' => $validated['fax'] ?? $user->fax,
+            'gsm_number_public' => $validated['gsm_number_public'] ?? $user->gsm_number_public,
+            'home_phone_public' => $validated['home_phone_public'] ?? $user->home_phone_public,
+            'work_phone_public' => $validated['work_phone_public'] ?? $user->work_phone_public,
+            'fax_public' => $validated['fax_public'] ?? $user->fax_public,
+            'horseman_type_id' => $validated['horseman_type_id'] ?? $user->horseman_type_id,
+            'is_member' => $validated['is_member'] ?? $user->is_member,
+            'membership_paid' => $validated['membership_paid'] ?? $user->membership_paid,
+            'notify_free_slots' => $validated['notify_free_slots'] ?? $user->notify_free_slots,
         ]);
 
         // Sync role if provided

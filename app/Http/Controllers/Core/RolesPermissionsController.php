@@ -80,7 +80,9 @@ class RolesPermissionsController extends Controller
         }
 
         // Get navigation items URLs to determine which modules are in sidebar
+        // Izključimo tipe 'users' in 'header', da se ti moduli prikažejo v drugem zavihku
         $navigationUrls = DB::table('navigation_items')
+            ->whereNotIn('type', ['users', 'header'])
             ->whereNotNull('url')
             ->pluck('url')
             ->map(function ($url) {

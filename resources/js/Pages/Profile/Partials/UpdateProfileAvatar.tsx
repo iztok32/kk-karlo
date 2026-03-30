@@ -18,10 +18,9 @@ export default function UpdateProfileAvatar({ canEdit }: Props) {
         user.avatar ? `/storage/${user.avatar}` : null
     );
 
-    const { data, setData, post, errors, processing, recentlySuccessful } =
+    const { data, setData, post, delete: destroy, errors, processing, recentlySuccessful } =
         useForm({
             avatar: null as File | null,
-            _method: 'patch',
         });
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,17 +36,21 @@ export default function UpdateProfileAvatar({ canEdit }: Props) {
     };
 
     const removeAvatar = () => {
-        setData('avatar', null);
-        setAvatarPreview(user.avatar ? `/storage/${user.avatar}` : null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        destroy(route('profile.avatar.destroy'), {
+            onSuccess: () => {
+                setData('avatar', null);
+                setAvatarPreview(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
+        });
     };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (canEdit && data.avatar) {
-            post(route('profile.update'), {
+            post(route('profile.avatar.update'), {
                 forceFormData: true,
                 onSuccess: () => {
                     // Reset file input after successful upload

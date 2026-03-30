@@ -21,4 +21,20 @@ class Horse extends Model
         'year' => 'integer',
         'display_order' => 'integer',
     ];
+
+    /**
+     * Get the images for the horse
+     */
+    public function images()
+    {
+        return $this->hasMany(HorseImage::class)->orderBy('display_order');
+    }
+
+    /**
+     * Get the primary image for the horse
+     */
+    public function primaryImage()
+    {
+        return $this->hasOne(HorseImage::class)->where('is_primary', true);
+    }
 }

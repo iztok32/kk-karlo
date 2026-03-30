@@ -49,12 +49,18 @@ interface Role {
     slug: string;
 }
 
+interface HorsemanType {
+    id: number;
+    name: string;
+}
+
 interface Props {
     users: User[];
     roles: Role[];
+    horsemanTypes: HorsemanType[];
 }
 
-export default function Index({ users, roles }: Props) {
+export default function Index({ users, roles, horsemanTypes }: Props) {
     const { t } = useTranslation();
     const { auth } = usePage<PageProps>().props;
     const userPermissions = auth.user?.permissions || [];
@@ -260,6 +266,7 @@ export default function Index({ users, roles }: Props) {
                     <UserForm
                         user={editingUser}
                         roles={roles}
+                        horsemanTypes={horsemanTypes}
                         onClose={handleCloseSheet}
                     />
                 </SheetContent>

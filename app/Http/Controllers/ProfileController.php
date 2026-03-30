@@ -29,6 +29,9 @@ class ProfileController extends Controller
                 'canEdit' => $user->hasPermission('profile.edit'),
                 'canDelete' => $user->hasPermission('profile.delete'),
             ],
+            'horsemanTypes' => \App\Models\HorsemanType::where('is_active', true)
+                ->orderBy('display_order')
+                ->get(['id', 'name']),
         ]);
     }
 
@@ -37,6 +40,9 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        // Eager-load roles with permissions to ensure hasPermission() works correctly
+        $request->user()->load('roles.permissions');
+
         // Check if user has permission to edit profile
         if (!$request->user()->hasPermission('profile.edit')) {
             abort(403, 'You do not have permission to edit your profile.');
@@ -67,10 +73,71 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update the user's avatar.
+     */
+    public function updateAvatar(Request $request): RedirectResponse
+    {
+        // Eager-load roles with permissions to ensure hasPermission() works correctly
+        $request->user()->load('roles.permissions');
+
+        // Check if user has permission to edit profile
+        if (!$request->user()->hasPermission('profile.edit')) {
+            abort(403, 'You do not have permission to edit your profile.');
+        }
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            // Store new avatar
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $path;
+            $user->save();
+        }
+
+        return Redirect::back()->with('success', 'Avatar updated successfully.');
+    }
+
+    /**
+     * Remove the user's avatar.
+     */
+    public function destroyAvatar(Request $request): RedirectResponse
+    {
+        // Eager-load roles with permissions
+        $request->user()->load('roles.permissions');
+
+        if (!$request->user()->hasPermission('profile.edit')) {
+            abort(403, 'You do not have permission to edit your profile.');
+        }
+
+        $user = $request->user();
+
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+            $user->avatar = null;
+            $user->save();
+        }
+
+        return Redirect::back()->with('success', 'Avatar removed successfully.');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse
     {
+        // Eager-load roles with permissions to ensure hasPermission() works correctly
+        $request->user()->load('roles.permissions');
+
         // Check if user has permission to delete account
         if (!$request->user()->hasPermission('profile.delete')) {
             abort(403, 'You do not have permission to delete your account.');

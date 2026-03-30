@@ -21,8 +21,14 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('horses/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorder'])->name('horses.reorder');
+    Route::post('horses/{horse}/images', [\App\Http\Controllers\Club\HorseController::class, 'uploadImages'])->name('horses.images.upload');
+    Route::delete('horse-images/{image}', [\App\Http\Controllers\Club\HorseController::class, 'deleteImage'])->name('horses.images.delete');
+    Route::post('horses/{horse}/images/{image}/primary', [\App\Http\Controllers\Club\HorseController::class, 'setPrimaryImage'])->name('horses.images.primary');
+    Route::post('horses/{horse}/images/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorderImages'])->name('horses.images.reorder');
     Route::resource('horses', \App\Http\Controllers\Club\HorseController::class);
     Route::resource('news', \App\Http\Controllers\Club\NewsController::class);
     Route::post('horseman/reorder', [\App\Http\Controllers\Club\HorsemanController::class, 'reorder'])->name('horseman.reorder');

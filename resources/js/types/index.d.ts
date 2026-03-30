@@ -16,6 +16,31 @@ export interface User {
     avatar?: string;
     permissions?: string[];
     config?: UserConfig;
+    // Profile fields
+    address?: string;
+    postal_code?: string;
+    city?: string;
+    date_of_birth?: string;
+    username?: string;
+    home_phone?: string;
+    work_phone?: string;
+    fax?: string;
+    gsm_number_public: boolean;
+    home_phone_public: boolean;
+    work_phone_public: boolean;
+    fax_public: boolean;
+    horseman_type_id?: number;
+    horseman_type?: HorsemanType;
+    is_member: boolean;
+    membership_paid: boolean;
+    notify_free_slots: boolean;
+}
+
+export interface HorsemanType {
+    id: number;
+    name: string;
+    display_order: number;
+    is_active: boolean;
 }
 
 export interface NavigationItem {
@@ -54,6 +79,7 @@ export type PageProps<
         info?: string;
         permission_denied?: boolean;
     };
+    horsemanTypes?: HorsemanType[];
 };
 
 declare global {

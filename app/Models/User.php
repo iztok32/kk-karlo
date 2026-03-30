@@ -29,6 +29,23 @@ class User extends Authenticatable implements AuditableContract
         'gsm_number',
         'avatar',
         'config',
+        // Profile fields
+        'address',
+        'postal_code',
+        'city',
+        'date_of_birth',
+        'username',
+        'home_phone',
+        'work_phone',
+        'fax',
+        'gsm_number_public',
+        'home_phone_public',
+        'work_phone_public',
+        'fax_public',
+        'horseman_type_id',
+        'is_member',
+        'membership_paid',
+        'notify_free_slots',
     ];
 
     /**
@@ -53,12 +70,26 @@ class User extends Authenticatable implements AuditableContract
             'password' => 'hashed',
             'is_active' => 'boolean',
             'config' => 'array',
+            // Profile casts
+            'date_of_birth' => 'date',
+            'gsm_number_public' => 'boolean',
+            'home_phone_public' => 'boolean',
+            'work_phone_public' => 'boolean',
+            'fax_public' => 'boolean',
+            'is_member' => 'boolean',
+            'membership_paid' => 'boolean',
+            'notify_free_slots' => 'boolean',
         ];
     }
 
     public function roles()
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    public function horsemanType()
+    {
+        return $this->belongsTo(HorsemanType::class);
     }
 
     public function hasRole($role)
