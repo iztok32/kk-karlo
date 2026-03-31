@@ -16,9 +16,9 @@ class ReservationController extends Controller
 {
     public function index(Request $request)
     {
-        $view      = $request->get('view', 'month');
-        $startDate = $request->get('start');
-        $endDate   = $request->get('end');
+        $view      = $request->input('view', 'month');
+        $startDate = $request->input('start');
+        $endDate   = $request->input('end');
 
         // Default to current month if no dates provided
         if (! $startDate || ! $endDate) {

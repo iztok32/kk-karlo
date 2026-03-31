@@ -158,10 +158,10 @@ function getDateRange(date: Date, viewType: string): { start: string; end: strin
     const d = format(date, 'yyyy-MM-dd');
     return { start: d, end: d };
   }
-  // default: month
+  // default: month — use full grid range (incl. adjacent-month days shown in calendar)
   return {
-    start: format(startOfMonth(date), 'yyyy-MM-dd'),
-    end: format(endOfMonth(date), 'yyyy-MM-dd'),
+    start: format(startOfWeek(startOfMonth(date), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+    end: format(endOfWeek(endOfMonth(date), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
   };
 }
 
@@ -199,17 +199,26 @@ function SlotChip({ appointment, date, reservations, authUserId, onClick, compac
             onClick={onClick}
             disabled={isFull && !userHasReservation}
             className={cn(
-              'w-full text-left text-xs px-1.5 py-0.5 rounded border truncate',
+              'w-full text-left text-xs px-1.5 py-0.5 rounded border',
               colorClass,
               isFull && !userHasReservation ? 'cursor-default' : 'cursor-pointer',
             )}
           >
-            {appointment.start_time && (
-              <span className="font-medium">{formatTime(appointment.start_time)} </span>
+            <div className="flex items-center gap-1 truncate">
+              {appointment.start_time && (
+                <span className="font-medium shrink-0">{formatTime(appointment.start_time)}</span>
+              )}
+              <span className="truncate">{appointment.name}</span>
+              <span className="font-semibold shrink-0">{label}</span>
+              {userHasReservation && <span className="shrink-0">✓</span>}
+            </div>
+            {reservations.length > 0 && (
+              <div className="flex flex-wrap gap-x-1 mt-0.5">
+                {reservations.map((r) => (
+                  <span key={r.id} className="truncate opacity-80">🐴 {r.horse.name}</span>
+                ))}
+              </div>
             )}
-            <span className="truncate">{appointment.name}</span>
-            <span className="ml-1 font-semibold">{label}</span>
-            {userHasReservation && <span className="ml-1">✓</span>}
           </button>
         </TooltipTrigger>
         <TooltipContent>
@@ -223,6 +232,9 @@ function SlotChip({ appointment, date, reservations, authUserId, onClick, compac
           <p className="text-xs">
             {isFull ? 'Polno zasedeno' : `${count} / ${capacity ?? '∞'} rezervacij`}
           </p>
+          {reservations.map((r) => (
+            <p key={r.id} className="text-xs">🐴 {r.horse.name}</p>
+          ))}
           {userHasReservation && <p className="text-xs font-medium">✓ Imate rezervacijo</p>}
         </TooltipContent>
       </Tooltip>
@@ -255,6 +267,13 @@ function SlotChip({ appointment, date, reservations, authUserId, onClick, compac
           {userHasReservation && ' ✓'}
         </span>
       </div>
+      {reservations.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 mt-1.5">
+          {reservations.map((r) => (
+            <span key={r.id} className="text-xs opacity-80">🐴 {r.horse.name}</span>
+          ))}
+        </div>
+      )}
     </button>
   );
 }
@@ -287,7 +306,6 @@ export default function Index({
   const [selectedSlot, setSelectedSlot] = useState<{
     appointment: Appointment;
     date: Date;
-    slotReservations: Reservation[];
   } | null>(null);
 
   // Reservation form
@@ -325,14 +343,20 @@ export default function Index({
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   function getSlotReservations(appointmentId: number, date: Date): Reservation[] {
+    const dateStr = format(date, 'yyyy-MM-dd');
     return reservations.filter(
-      (r) => r.appointment_id === appointmentId && isSameDay(parseISO(r.reservation_date), date),
+      (r) => r.appointment_id === appointmentId && r.reservation_date.slice(0, 10) === dateStr,
     );
   }
 
   function getAppointmentsForDay(date: Date): Appointment[] {
     return appointments.filter((a) => appointmentOnDate(a, date));
   }
+
+  // Always derived live from props so it refreshes after every POST
+  const selectedSlotReservations: Reservation[] = selectedSlot
+    ? getSlotReservations(selectedSlot.appointment.id, selectedSlot.date)
+    : [];
 
   // ── Navigation ──────────────────────────────────────────────────────────────
 
@@ -396,8 +420,7 @@ export default function Index({
   // ── Dialog handlers ─────────────────────────────────────────────────────────
 
   function openSlot(appointment: Appointment, date: Date) {
-    const slotRes = getSlotReservations(appointment.id, date);
-    setSelectedSlot({ appointment, date, slotReservations: slotRes });
+    setSelectedSlot({ appointment, date });
     setData({
       appointment_id: appointment.id,
       horse_id: '',
@@ -786,7 +809,7 @@ export default function Index({
                   <span>
                     {t('Available')}: {' '}
                     <strong>
-                      {selectedSlot.appointment.capacity - selectedSlot.slotReservations.length}
+                      {selectedSlot.appointment.capacity - selectedSlotReservations.length}
                     </strong>
                     {' '}/{' '}{selectedSlot.appointment.capacity} {t('spots')}
                   </span>
@@ -830,11 +853,19 @@ export default function Index({
                     <SelectValue placeholder={t('Select horse...')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {horses.map((h) => (
-                      <SelectItem key={h.id} value={String(h.id)}>
-                        {h.name}
-                      </SelectItem>
-                    ))}
+                    {horses.map((h) => {
+                      const isBooked = selectedSlotReservations.some((r) => r.horse_id === h.id);
+                      return (
+                        <SelectItem key={h.id} value={String(h.id)} disabled={isBooked}>
+                          <span className={isBooked ? 'text-muted-foreground line-through' : ''}>
+                            {h.name}
+                          </span>
+                          {isBooked && (
+                            <span className="ml-2 text-xs text-red-500">{t('booked')}</span>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 {errors.horse_id && (
@@ -876,33 +907,44 @@ export default function Index({
             </form>
           )}
 
-          {/* Existing reservations in slot (admin view) */}
-          {selectedSlot && selectedSlot.slotReservations.length > 0 && canReserveForOthers && (
+          {/* Existing reservations in slot — visible to all */}
+          {selectedSlot && selectedSlotReservations.length > 0 && (
             <div className="border-t border-border pt-4 mt-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 {t('Current reservations')}
               </p>
               <div className="space-y-1.5">
-                {selectedSlot.slotReservations.map((r) => (
+                {selectedSlotReservations.map((r) => (
                   <div
                     key={r.id}
                     className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-1.5"
                   >
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                        {r.user.name}
+                        <span>🐴</span>
+                        <span className="font-medium">{r.horse.name}</span>
                       </span>
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <span>🐴</span> {r.horse.name}
-                      </span>
+                      {canReserveForOthers && (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <User className="w-3.5 h-3.5" />
+                          {r.user.name}
+                          {r.user_id === authUserId && (
+                            <span className="text-xs text-primary font-medium">({t('me')})</span>
+                          )}
+                        </span>
+                      )}
+                      {!canReserveForOthers && r.user_id === authUserId && (
+                        <span className="text-xs text-primary font-medium">({t('me')})</span>
+                      )}
                     </div>
-                    <button
-                      onClick={() => handleCancel(r.id)}
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {(r.user_id === authUserId || canReserveForOthers) && (
+                      <button
+                        onClick={() => handleCancel(r.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
