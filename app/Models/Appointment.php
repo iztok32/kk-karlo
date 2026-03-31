@@ -28,6 +28,11 @@ class Appointment extends Model
         'is_active',
     ];
 
+    public function horses()
+    {
+        return $this->belongsToMany(Horse::class, 'appointment_horse');
+    }
+
     protected $casts = [
         'valid_from' => 'date',
         'valid_to' => 'date',

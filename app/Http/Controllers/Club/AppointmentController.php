@@ -4,23 +4,51 @@ namespace App\Http\Controllers\Club;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Horse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class AppointmentController extends Controller
 {
     public function index()
     {
+        $appointments = Appointment::with('horses:id')
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn($a) => [
+                'id'            => $a->id,
+                'name'          => $a->name,
+                'valid_from'    => $a->valid_from,
+                'valid_to'      => $a->valid_to,
+                'day_monday'    => $a->day_monday,
+                'day_tuesday'   => $a->day_tuesday,
+                'day_wednesday' => $a->day_wednesday,
+                'day_thursday'  => $a->day_thursday,
+                'day_friday'    => $a->day_friday,
+                'day_saturday'  => $a->day_saturday,
+                'day_sunday'    => $a->day_sunday,
+                'start_time'    => $a->start_time,
+                'end_time'      => $a->end_time,
+                'capacity'      => $a->capacity,
+                'type'          => $a->type,
+                'display_order' => $a->display_order,
+                'is_active'     => $a->is_active,
+                'horse_ids'     => $a->horses->pluck('id')->toArray(),
+            ]);
+
+        $horses = Horse::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Club/Appointment/Index', [
-            'appointments' => Appointment::orderBy('display_order')->orderBy('name')->get()
+            'appointments' => $appointments,
+            'horses'       => $horses,
         ]);
     }
 
     public function store(Request $request)
     {
-        Log::info('Appointment store request:', $request->all());
-
         $validated = $request->validate([
             'name'          => 'required|string|max:255',
             'valid_from'    => 'nullable|date',
@@ -37,19 +65,23 @@ class AppointmentController extends Controller
             'capacity'      => 'nullable|integer|min:1',
             'type'          => 'nullable|integer',
             'is_active'     => 'boolean',
+            'horse_ids'     => 'nullable|array',
+            'horse_ids.*'   => 'exists:horses,id',
         ]);
+
+        $horseIds = $validated['horse_ids'] ?? [];
+        unset($validated['horse_ids']);
 
         $validated['display_order'] = Appointment::max('display_order') + 1;
 
-        Appointment::create($validated);
+        $appointment = Appointment::create($validated);
+        $appointment->horses()->sync($horseIds);
 
         return redirect()->back()->with('success', __('Appointment successfully added.'));
     }
 
     public function update(Request $request, Appointment $appointment)
     {
-        Log::info('Appointment update request:', $request->all());
-
         $validated = $request->validate([
             'name'          => 'required|string|max:255',
             'valid_from'    => 'nullable|date',
@@ -66,9 +98,15 @@ class AppointmentController extends Controller
             'capacity'      => 'nullable|integer|min:1',
             'type'          => 'nullable|integer',
             'is_active'     => 'boolean',
+            'horse_ids'     => 'nullable|array',
+            'horse_ids.*'   => 'exists:horses,id',
         ]);
 
+        $horseIds = $validated['horse_ids'] ?? [];
+        unset($validated['horse_ids']);
+
         $appointment->update($validated);
+        $appointment->horses()->sync($horseIds);
 
         return redirect()->back()->with('success', __('Appointment successfully updated.'));
     }

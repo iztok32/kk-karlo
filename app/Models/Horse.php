@@ -25,6 +25,11 @@ class Horse extends Model
     /**
      * Get the images for the horse
      */
+    public function appointments()
+    {
+        return $this->belongsToMany(Appointment::class, 'appointment_horse');
+    }
+
     public function images()
     {
         return $this->hasMany(HorseImage::class)->orderBy('display_order');

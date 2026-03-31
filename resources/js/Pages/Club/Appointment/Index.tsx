@@ -11,6 +11,13 @@ import {
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -52,6 +59,11 @@ import {
 import { Calendar as CalendarComponent } from "@/Components/ui/calendar"
 import { cn } from "@/lib/utils"
 
+interface HorseItem {
+  id: number;
+  name: string;
+}
+
 interface Appointment {
   id: number;
   name: string;
@@ -70,10 +82,12 @@ interface Appointment {
   type: number | null;
   display_order: number;
   is_active: boolean;
+  horse_ids: number[];
 }
 
 interface Props {
   appointments: Appointment[];
+  horses: HorseItem[];
 }
 
 const DaysRow = ({ item }: { item: Appointment }) => {
@@ -109,10 +123,12 @@ const DaysRow = ({ item }: { item: Appointment }) => {
 
 function SortableRow({
   item,
+  horses,
   onEdit,
   onDelete,
 }: {
   item: Appointment;
+  horses: HorseItem[];
   onEdit: (item: Appointment) => void;
   onDelete: (item: Appointment) => void;
 }) {
@@ -167,7 +183,7 @@ function SortableRow({
       <TableCell className="font-medium">
         <div>{item.name}</div>
         <div className="text-xs text-muted-foreground">
-          {item.start_time?.substring(0, 5)} - {item.end_time?.substring(0, 5)} 
+          {item.start_time?.substring(0, 5)} - {item.end_time?.substring(0, 5)}
           <span className="mx-1">•</span>
           {getTypeLabel(item.type)}
         </div>
@@ -179,6 +195,23 @@ function SortableRow({
         <div className="text-xs">
           {item.valid_from ? format(new Date(item.valid_from), 'dd.MM.yyyy') : t('N/A')} - {item.valid_to ? format(new Date(item.valid_to), 'dd.MM.yyyy') : t('N/A')}
         </div>
+      </TableCell>
+      <TableCell className="text-center">
+        <span className="text-sm font-medium">{item.capacity ?? '∞'}</span>
+      </TableCell>
+      <TableCell>
+        {item.horse_ids.length === 0 ? (
+          <span className="text-xs text-muted-foreground italic">{t('All')}</span>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {item.horse_ids.map((id) => {
+              const h = horses.find(h => h.id === id);
+              return h ? (
+                <span key={id} className="text-xs bg-muted px-1.5 py-0.5 rounded">{h.name}</span>
+              ) : null;
+            })}
+          </div>
+        )}
       </TableCell>
       <TableCell>
         <div className="flex justify-center">
@@ -210,7 +243,7 @@ function SortableRow({
   );
 }
 
-export default function Index({ appointments: initialItems }: Props) {
+export default function Index({ appointments: initialItems, horses }: Props) {
   const { t, locale } = useTranslation();
   const [localItems, setLocalItems] = useState(initialItems);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -265,6 +298,7 @@ export default function Index({ appointments: initialItems }: Props) {
     capacity: number | null;
     type: number | null;
     is_active: boolean;
+    horse_ids: number[];
   }
 
   const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm<AppointmentForm>({
@@ -283,7 +317,22 @@ export default function Index({ appointments: initialItems }: Props) {
     capacity: 1,
     type: 1,
     is_active: true,
+    horse_ids: [],
   });
+
+  const allHorseIds = horses.map(h => h.id);
+  const allSelected = allHorseIds.length > 0 && allHorseIds.every(id => data.horse_ids.includes(id));
+
+  const toggleHorse = (id: number) => {
+    setData('horse_ids', data.horse_ids.includes(id)
+      ? data.horse_ids.filter(hid => hid !== id)
+      : [...data.horse_ids, id]
+    );
+  };
+
+  const toggleAll = () => {
+    setData('horse_ids', allSelected ? [] : allHorseIds);
+  };
 
   const openAddDialog = () => {
     setEditingItem(null);
@@ -310,6 +359,7 @@ export default function Index({ appointments: initialItems }: Props) {
       capacity: item.capacity,
       type: item.type,
       is_active: item.is_active,
+      horse_ids: item.horse_ids,
     });
     clearErrors();
     setIsDialogOpen(true);
@@ -432,6 +482,8 @@ export default function Index({ appointments: initialItems }: Props) {
                         <TableHead>{t('Name')}</TableHead>
                         <TableHead>{t('Days')}</TableHead>
                         <TableHead>{t('Validity')}</TableHead>
+                        <TableHead className="w-[80px] text-center">{t('Capacity')}</TableHead>
+                        <TableHead>{t('Horses')}</TableHead>
                         <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
                         <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                       </TableRow>
@@ -439,7 +491,7 @@ export default function Index({ appointments: initialItems }: Props) {
                     <TableBody>
                       {filteredItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4 text-muted-foreground italic">
+                          <TableCell colSpan={8} className="text-center py-4 text-muted-foreground italic">
                             {searchTerm 
                               ? t('No appointments found matching ":search".', { search: searchTerm }) 
                               : (showActive ? t('No active appointments found.') : t('No inactive appointments found.'))}
@@ -454,6 +506,7 @@ export default function Index({ appointments: initialItems }: Props) {
                             <SortableRow
                               key={item.id}
                               item={item}
+                              horses={horses}
                               onEdit={openEditDialog}
                               onDelete={handleDelete}
                             />
@@ -569,37 +622,51 @@ export default function Index({ appointments: initialItems }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-wrap gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="start_time">{t('Start Time')}</Label>
-                  <Input
-                    id="start_time"
-                    type="time"
-                    value={data.start_time}
-                    onChange={(e) => setData('start_time', e.target.value)}
-                  />
+                  <Label>{t('Start Time')}</Label>
+                  <Select value={data.start_time} onValueChange={(v) => setData('start_time', v)}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 * 4 }, (_, i) => {
+                        const h = String(Math.floor(i / 4)).padStart(2, '0');
+                        const m = String((i % 4) * 15).padStart(2, '0');
+                        const val = `${h}:${m}`;
+                        return <SelectItem key={val} value={val}>{val}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
                   {errors.start_time && <p className="text-sm text-red-500">{errors.start_time}</p>}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="end_time">{t('End Time')}</Label>
-                  <Input
-                    id="end_time"
-                    type="time"
-                    value={data.end_time}
-                    onChange={(e) => setData('end_time', e.target.value)}
-                  />
+                  <Label>{t('End Time')}</Label>
+                  <Select value={data.end_time} onValueChange={(v) => setData('end_time', v)}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 * 4 }, (_, i) => {
+                        const h = String(Math.floor(i / 4)).padStart(2, '0');
+                        const m = String((i % 4) * 15).padStart(2, '0');
+                        const val = `${h}:${m}`;
+                        return <SelectItem key={val} value={val}>{val}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
                   {errors.end_time && <p className="text-sm text-red-500">{errors.end_time}</p>}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="capacity">{t('Capacity')}</Label>
                   <Input
                     id="capacity"
                     type="number"
+                    min={1}
+                    max={99}
                     value={data.capacity || ''}
                     onChange={(e) => setData('capacity', e.target.value ? parseInt(e.target.value) : 1)}
+                    className="w-20"
                   />
                   {errors.capacity && <p className="text-sm text-red-500">{errors.capacity}</p>}
                 </div>
@@ -619,6 +686,39 @@ export default function Index({ appointments: initialItems }: Props) {
                   </select>
                   {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
                 </div>
+              </div>
+
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label>{t('Horses')}</Label>
+                  <button
+                    type="button"
+                    onClick={toggleAll}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {allSelected ? t('Deselect all') : t('Select all')}
+                  </button>
+                </div>
+                <div className="border rounded-md p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                  {horses.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic col-span-full">{t('No horses available.')}</p>
+                  ) : (
+                    horses.map(h => (
+                      <label key={h.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={data.horse_ids.includes(h.id)}
+                          onChange={() => toggleHorse(h.id)}
+                          className="rounded border-gray-300"
+                        />
+                        {h.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {data.horse_ids.length === 0 ? t('No selection = all horses available') : `${data.horse_ids.length} / ${horses.length} ${t('selected')}`}
+                </p>
               </div>
 
               <div className="flex items-center space-x-2">
