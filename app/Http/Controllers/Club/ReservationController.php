@@ -121,7 +121,26 @@ class ReservationController extends Controller
             return back()->withErrors(['appointment_id' => __('User already has a reservation for this appointment on this date.')]);
         }
 
-        Reservation::create($validated);
+        $reservation = Reservation::create($validated);
+
+        // Auto-deduct a coupon if the user has a positive balance of any type
+        $balanceRecord = \Illuminate\Support\Facades\DB::table('coupons')
+            ->select('coupon_type_id', \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) as balance"))
+            ->where('user_id', $validated['user_id'])
+            ->whereNull('deleted_at')
+            ->groupBy('coupon_type_id')
+            ->having('balance', '>', 0)
+            ->first();
+
+        if ($balanceRecord) {
+            \App\Models\Coupon::create([
+                'user_id' => $validated['user_id'],
+                'coupon_type_id' => $balanceRecord->coupon_type_id,
+                'quantity' => 1,
+                'transaction_type' => 'usage',
+                'reservation_id' => $reservation->id,
+            ]);
+        }
 
         return redirect()->back()->with('success', __('Reservation successfully added.'));
     }
@@ -134,6 +153,9 @@ class ReservationController extends Controller
         if (! $canReserveForOthers && $reservation->user_id !== auth()->id()) {
             abort(403, __('Unauthorized.'));
         }
+
+        // Delete any related coupon usage records
+        \App\Models\Coupon::where('reservation_id', $reservation->id)->delete();
 
         $reservation->delete();
 

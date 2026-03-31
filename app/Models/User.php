@@ -92,6 +92,11 @@ class User extends Authenticatable implements AuditableContract
         return $this->belongsTo(HorsemanType::class);
     }
 
+    public function coupons()
+    {
+        return $this->hasMany(Coupon::class);
+    }
+
     public function hasRole($role)
     {
         if (is_string($role)) {

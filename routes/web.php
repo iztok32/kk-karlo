@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::post('appointment/reorder', [\App\Http\Controllers\Club\AppointmentController::class, 'reorder'])->name('appointment.reorder');
     Route::resource('appointment', \App\Http\Controllers\Club\AppointmentController::class);
     Route::resource('reservations', \App\Http\Controllers\Club\ReservationController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('coupons', \App\Http\Controllers\Club\CouponController::class)->only(['index', 'store', 'destroy']);
     Route::resource('navigation', \App\Http\Controllers\Core\NavigationItemController::class)->except(['create', 'edit', 'show']);
     Route::post('navigation/reorder', [\App\Http\Controllers\Core\NavigationItemController::class, 'reorder'])->name('navigation.reorder');
     Route::post('navigation/config', [\App\Http\Controllers\Core\NavigationItemController::class, 'updateConfig'])->name('navigation.updateConfig');
