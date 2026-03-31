@@ -9,8 +9,6 @@ import {
   DialogTitle,
 } from '@/Components/ui/dialog';
 import { Input } from '@/Components/ui/input';
-import { Label } from '@/Components/ui/label';
-import Editor from '@/Components/Editor';
 import {
   Table,
   TableBody,
@@ -19,21 +17,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/Components/ui/table';
-import { useForm, Head } from '@inertiajs/react';
-import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, Check, X, Calendar, Search } from 'lucide-react';
+import { router, Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Pencil, Trash2, Plus, Check, X, Search, ImageOff, LayoutList, LayoutGrid } from 'lucide-react';
 import { Switch } from '@/Components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import { useTranslation } from '@/lib/i18n';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { sl, enGB, hr, it, de } from 'date-fns/locale';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/Components/ui/popover"
-import { Calendar as CalendarComponent } from "@/Components/ui/calendar"
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils';
+import NewsCardView from './Partials/NewsCardView';
+
+interface NewsImage {
+  id: number;
+  url: string;
+  is_primary: boolean;
+  display_order: number;
+}
 
 interface News {
   id: number;
@@ -44,6 +44,7 @@ interface News {
   is_on_auth_page: boolean;
   is_on_public_page: boolean;
   is_active: boolean;
+  images: NewsImage[];
 }
 
 interface Props {
@@ -52,7 +53,7 @@ interface Props {
 
 export default function Index({ news }: Props) {
   const { t, locale } = useTranslation();
-  
+
   const getLocale = (localeStr: string) => {
     switch (localeStr) {
       case 'sl': return sl;
@@ -64,12 +65,12 @@ export default function Index({ news }: Props) {
   };
 
   const currentLocale = getLocale(locale);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingNews, setEditingNews] = useState<News | null>(null);
   const [newsToDelete, setNewsToDelete] = useState<News | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [showActive, setShowActive] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const filteredNews = news.filter(item => {
     const matchesStatus = item.is_active === showActive;
@@ -77,74 +78,25 @@ export default function Index({ news }: Props) {
     return matchesStatus && matchesSearch;
   });
 
-  const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
-    title: '',
-    content: '',
-    published_at: '',
-    end_date: '',
-    is_on_auth_page: false,
-    is_on_public_page: false,
-    is_active: true,
-  });
-
-  const formatDateForInput = (dateString: string | null) => {
-    if (!dateString) return '';
-    return dateString;
-  };
-
-  const openAddDialog = () => {
-    setEditingNews(null);
-    reset();
-    setData('published_at', new Date().toISOString());
-    clearErrors();
-    setIsDialogOpen(true);
-  };
-
-  const openEditDialog = (item: News) => {
-    setEditingNews(item);
-    setData({
-      title: item.title,
-      content: item.content,
-      published_at: formatDateForInput(item.published_at),
-      end_date: formatDateForInput(item.end_date),
-      is_on_auth_page: item.is_on_auth_page,
-      is_on_public_page: item.is_on_public_page,
-      is_active: item.is_active,
-    });
-    clearErrors();
-    setIsDialogOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const options = {
-      onSuccess: () => {
-        setIsDialogOpen(false);
-        reset();
-      },
-      preserveState: true,
-      preserveScroll: true,
-    };
-
-    if (editingNews) {
-      put(route('news.update', { news: editingNews.id }), options);
-    } else {
-      post(route('news.store'), options);
-    }
-  };
-
   const handleDelete = (item: News) => {
     setNewsToDelete(item);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
-    if (newsToDelete) {
-      destroy(route('news.destroy', { news: newsToDelete.id }), {
-        onSuccess: () => setIsDeleteDialogOpen(false),
-      });
-    }
+    if (!newsToDelete) return;
+    setDeleting(true);
+    router.delete(route('news.destroy', { news: newsToDelete.id }), {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        setDeleting(false);
+      },
+      onError: () => setDeleting(false),
+    });
+  };
+
+  const getPrimaryImage = (item: News) => {
+    return item.images.find(img => img.is_primary) ?? item.images[0] ?? null;
   };
 
   return (
@@ -163,7 +115,7 @@ export default function Index({ news }: Props) {
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">{t('News List')}</h3>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className="relative w-64">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -176,18 +128,18 @@ export default function Index({ news }: Props) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="relative inline-flex items-center">
-                        <Switch 
+                        <Switch
                           checked={showActive}
                           onCheckedChange={setShowActive}
                           className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
                         />
                         <X className={cn(
-                          "pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200",
-                          showActive ? "opacity-0" : "opacity-100"
+                          'pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200',
+                          showActive ? 'opacity-0' : 'opacity-100'
                         )} />
                         <Check className={cn(
-                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
-                          showActive ? "opacity-100" : "opacity-0"
+                          'pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200',
+                          showActive ? 'opacity-100' : 'opacity-0'
                         )} />
                       </div>
                     </TooltipTrigger>
@@ -195,218 +147,147 @@ export default function Index({ news }: Props) {
                       {t('Show active/inactive news')}
                     </TooltipContent>
                   </Tooltip>
-                  <Button onClick={openAddDialog}>
-                    <Plus className="mr-2 h-4 w-4" /> {t('Add News')}
-                  </Button>
+                  <div className="flex items-center border rounded-md">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={viewMode === 'table' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('table')}
+                          className="rounded-r-none"
+                        >
+                          <LayoutList className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('Table View')}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('cards')}
+                          className="rounded-l-none"
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('Card View')}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Link href={route('news.create')}>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" /> {t('Add News')}
+                    </Button>
+                  </Link>
                 </div>
               </div>
 
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Title')}</TableHead>
-                      <TableHead>{t('Published At')}</TableHead>
-                      <TableHead className="w-[100px] text-center">{t('Public')}</TableHead>
-                      <TableHead className="w-[100px] text-center">{t('Auth')}</TableHead>
-                      <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
-                      <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredNews.length === 0 ? (
+              {viewMode === 'table' ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground italic">
-                          {searchTerm 
-                            ? t('No news found matching ":search".', { search: searchTerm }) 
-                            : (showActive ? t('No active news found.') : t('No inactive news found.'))}
-                        </TableCell>
+                        <TableHead className="w-[60px]"></TableHead>
+                        <TableHead>{t('Title')}</TableHead>
+                        <TableHead>{t('Published At')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Public')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Auth')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
+                        <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredNews.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.title}</TableCell>
-                          <TableCell>
-                            {item.published_at ? format(new Date(item.published_at), 'Pp', { locale: currentLocale }) : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-center">
-                              {item.is_on_public_page ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <X className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-center">
-                              {item.is_on_auth_page ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <X className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-center">
-                              {item.is_active ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <X className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-[100px] text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(item)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() => handleDelete(item)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredNews.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-4 text-muted-foreground italic">
+                            {searchTerm
+                              ? t('No news found matching ":search".', { search: searchTerm })
+                              : (showActive ? t('No active news found.') : t('No inactive news found.'))}
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ) : (
+                        filteredNews.map((item) => {
+                          const primaryImage = getPrimaryImage(item);
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="p-2">
+                                {primaryImage ? (
+                                  <img
+                                    src={primaryImage.url}
+                                    alt={item.title}
+                                    className="w-12 h-12 object-cover rounded-md"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 flex items-center justify-center rounded-md bg-muted">
+                                    <ImageOff className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">{item.title}</TableCell>
+                              <TableCell>
+                                {item.published_at ? format(new Date(item.published_at), 'PP', { locale: currentLocale }) : '-'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex justify-center">
+                                  {item.is_on_public_page ? (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <X className="h-4 w-4 text-red-500" />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex justify-center">
+                                  {item.is_on_auth_page ? (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <X className="h-4 w-4 text-red-500" />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex justify-center">
+                                  {item.is_active ? (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <X className="h-4 w-4 text-red-500" />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="w-[100px] text-right">
+                                <Link href={route('news.edit', item.id)}>
+                                  <Button variant="ghost" size="icon">
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500 hover:text-red-700"
+                                  onClick={() => handleDelete(item)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <NewsCardView
+                  news={filteredNews}
+                  locale={locale}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>{editingNews ? t('Edit News') : t('Add News')}</DialogTitle>
-              <DialogDescription>
-                {t('Fill in the details for the news article.')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">{t('Title')}</Label>
-                <Input
-                  id="title"
-                  value={data.title}
-                  onChange={(e) => setData('title', e.target.value)}
-                  className={errors.title ? 'border-red-500' : ''}
-                />
-                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="content">{t('Content')}</Label>
-                <Editor
-                  content={data.content}
-                  onChange={(content) => setData('content', content)}
-                  className={errors.content ? 'border-red-500' : ''}
-                />
-                {errors.content && <p className="text-sm text-red-500">{errors.content}</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="published_at">{t('Start Date')}</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !data.published_at && "text-muted-foreground"
-                        )}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {data.published_at ? format(new Date(data.published_at), "PPP", { locale: currentLocale }) : <span>{t('Pick a date')}</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CalendarComponent
-                        mode="single"
-                        selected={data.published_at ? new Date(data.published_at) : undefined}
-                        onSelect={(date) => setData('published_at', date?.toISOString() || '')}
-                        initialFocus
-                        locale={currentLocale}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {errors.published_at && <p className="text-sm text-red-500">{errors.published_at}</p>}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="end_date">{t('End Date')}</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !data.end_date && "text-muted-foreground"
-                        )}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {data.end_date ? format(new Date(data.end_date), "PPP", { locale: currentLocale }) : <span>{t('Pick a date')}</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CalendarComponent
-                        mode="single"
-                        selected={data.end_date ? new Date(data.end_date) : undefined}
-                        onSelect={(date) => setData('end_date', date?.toISOString() || '')}
-                        initialFocus
-                        locale={currentLocale}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {errors.end_date && <p className="text-sm text-red-500">{errors.end_date}</p>}
-                </div>
-              </div>
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_on_public_page"
-                    checked={data.is_on_public_page}
-                    onCheckedChange={(checked) => setData('is_on_public_page', checked)}
-                  />
-                  <Label htmlFor="is_on_public_page">{t('Show on Public Page')}</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_on_auth_page"
-                    checked={data.is_on_auth_page}
-                    onCheckedChange={(checked) => setData('is_on_auth_page', checked)}
-                  />
-                  <Label htmlFor="is_on_auth_page">{t('Show on Auth Page')}</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_active"
-                    checked={data.is_active}
-                    onCheckedChange={(checked) => setData('is_active', checked)}
-                  />
-                  <Label htmlFor="is_active">{t('Is Active')}</Label>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                {t('Cancel')}
-              </Button>
-              <Button type="submit" disabled={processing}>
-                {editingNews ? t('Update') : t('Save')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -428,7 +309,7 @@ export default function Index({ news }: Props) {
               type="button"
               variant="destructive"
               onClick={confirmDelete}
-              disabled={processing}
+              disabled={deleting}
             >
               {t('Delete')}
             </Button>

@@ -14,9 +14,7 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -30,6 +28,10 @@ Route::middleware('auth')->group(function () {
     Route::post('horses/{horse}/images/{image}/primary', [\App\Http\Controllers\Club\HorseController::class, 'setPrimaryImage'])->name('horses.images.primary');
     Route::post('horses/{horse}/images/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorderImages'])->name('horses.images.reorder');
     Route::resource('horses', \App\Http\Controllers\Club\HorseController::class);
+    Route::post('news/{news}/images', [\App\Http\Controllers\Club\NewsController::class, 'uploadImages'])->name('news.images.upload');
+    Route::delete('news-images/{image}', [\App\Http\Controllers\Club\NewsController::class, 'deleteImage'])->name('news.images.delete');
+    Route::post('news/{news}/images/reorder', [\App\Http\Controllers\Club\NewsController::class, 'reorderImages'])->name('news.images.reorder');
+    Route::post('news/{news}/images/{image}/primary', [\App\Http\Controllers\Club\NewsController::class, 'setPrimaryImage'])->name('news.images.primary');
     Route::resource('news', \App\Http\Controllers\Club\NewsController::class);
     Route::post('horseman/reorder', [\App\Http\Controllers\Club\HorsemanController::class, 'reorder'])->name('horseman.reorder');
     Route::resource('horseman', \App\Http\Controllers\Club\HorsemanController::class);

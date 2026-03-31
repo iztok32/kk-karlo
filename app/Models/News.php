@@ -26,4 +26,14 @@ class News extends Model
         'published_at' => 'datetime',
         'end_date' => 'datetime',
     ];
+
+    public function images()
+    {
+        return $this->hasMany(NewsImage::class)->orderBy('display_order');
+    }
+
+    public function primaryImage()
+    {
+        return $this->hasOne(NewsImage::class)->where('is_primary', true);
+    }
 }

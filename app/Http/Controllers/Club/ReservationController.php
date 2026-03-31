@@ -129,7 +129,7 @@ class ReservationController extends Controller
             ->where('user_id', $validated['user_id'])
             ->whereNull('deleted_at')
             ->groupBy('coupon_type_id')
-            ->having('balance', '>', 0)
+            ->havingRaw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) > 0")
             ->first();
 
         if ($balanceRecord) {
