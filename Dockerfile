@@ -10,7 +10,7 @@ COPY . .
 RUN npm run build
 
 # ─── Stage 2: Production image ────────────────────────────────────────────────
-FROM php:8.2-fpm-alpine AS production
+FROM php:8.4-fpm-alpine AS production
 
 LABEL maintainer="Iztok Vozlič"
 LABEL org.opencontainers.image.source="https://github.com/iztok32/kk-karlo"

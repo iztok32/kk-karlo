@@ -51,6 +51,8 @@ services:
 
   db:
     image: postgres:16-alpine
+    ports:
+      - "5433:5432"    # lokalno: localhost:5433 (5432 je mogoče zaseden)
     environment:
       POSTGRES_DB: kk_karlo
       POSTGRES_USER: karlo
