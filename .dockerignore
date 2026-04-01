@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose*.yml
+.dockerignore
+
+# Node
+node_modules
+npm-debug.log
+
+# PHP dev
+vendor
+
+# Laravel
+.env
+.env.*
+!.env.example
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+
+# Build output (rebuilt in Docker)
+public/build
+public/hot
+
+# Tests
+tests
+
+# IDE
+.idea
+.vscode
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+*.md
