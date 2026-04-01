@@ -1,8 +1,16 @@
-# ─── Production image ─────────────────────────────────────────────────────────
-# Frontend assets (public/build/) must be compiled locally before building:
-#   npm run build
-#   docker compose up --build
-FROM php:8.4-fpm AS production
+# ─── Stage 1: Build frontend assets ──────────────────────────────────────────
+FROM node:20-alpine AS node-builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --frozen-lockfile
+
+COPY . .
+RUN npm run build
+
+# ─── Stage 2: Production image ────────────────────────────────────────────────
+FROM php:8.4-fpm-alpine AS production
 
 LABEL maintainer="Iztok Vozlič"
 LABEL org.opencontainers.image.source="https://github.com/iztok32/kk-karlo"
