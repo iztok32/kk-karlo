@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
-import { Plus, Edit2, Trash2, Mail, Check, X, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Mail, Check, X, Search, LayoutGrid, LayoutList } from 'lucide-react';
 import { PageProps } from '@/types';
 import {
     Table,
@@ -75,6 +75,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
     const handleCreate = () => {
         setEditingUser(undefined);
@@ -147,6 +148,24 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                     className="pl-8 w-64"
                                 />
                             </div>
+                            <Button
+                                variant={viewMode === 'table' ? 'secondary' : 'outline'}
+                                size="sm"
+                                className="h-9 w-9 p-0"
+                                onClick={() => setViewMode('table')}
+                                title={t('Table view')}
+                            >
+                                <LayoutList className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant={viewMode === 'card' ? 'secondary' : 'outline'}
+                                size="sm"
+                                className="h-9 w-9 p-0"
+                                onClick={() => setViewMode('card')}
+                                title={t('Card view')}
+                            >
+                                <LayoutGrid className="h-4 w-4" />
+                            </Button>
                             {canCreate && (
                                 <Button onClick={handleCreate} size="sm" className="gap-2">
                                     <Plus className="h-4 w-4" />
@@ -156,99 +175,183 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('Name')}</TableHead>
-                                    <TableHead>{t('Email')}</TableHead>
-                                    <TableHead>{t('Status')}</TableHead>
-                                    <TableHead>{t('Roles')}</TableHead>
-                                    <TableHead className="text-right">{t('Actions')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredUsers.length > 0 ? (
-                                    filteredUsers.map((user) => (
-                                        <TableRow key={user.id} className={user.deleted_at ? 'opacity-50' : ''}>
-                                            <TableCell className="font-medium">{user.name}</TableCell>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    {user.deleted_at ? (
-                                                        <Badge variant="destructive">{t('Deleted')}</Badge>
-                                                    ) : user.is_active ? (
-                                                        <Badge variant="default" className="gap-1">
-                                                            <Check className="h-3 w-3" />
-                                                            {t('Active')}
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="secondary" className="gap-1">
-                                                            <X className="h-3 w-3" />
-                                                            {t('Inactive')}
-                                                        </Badge>
-                                                    )}
-                                                </div>
+                        {viewMode === 'table' ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>{t('Name')}</TableHead>
+                                        <TableHead>{t('Email')}</TableHead>
+                                        <TableHead>{t('Status')}</TableHead>
+                                        <TableHead>{t('Roles')}</TableHead>
+                                        <TableHead className="text-right">{t('Actions')}</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredUsers.length > 0 ? (
+                                        filteredUsers.map((user) => (
+                                            <TableRow key={user.id} className={user.deleted_at ? 'opacity-50' : ''}>
+                                                <TableCell className="font-medium">{user.name}</TableCell>
+                                                <TableCell>{user.email}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {user.deleted_at ? (
+                                                            <Badge variant="destructive">{t('Deleted')}</Badge>
+                                                        ) : user.is_active ? (
+                                                            <Badge variant="default" className="gap-1">
+                                                                <Check className="h-3 w-3" />
+                                                                {t('Active')}
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="secondary" className="gap-1">
+                                                                <X className="h-3 w-3" />
+                                                                {t('Inactive')}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {user.roles.map((role, index) => (
+                                                            <Badge key={index} variant="outline">
+                                                                {role}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        {canEdit && (
+                                                            <>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleSendPasswordReset(user.id)}
+                                                                    title={t('Send Password Reset Link')}
+                                                                >
+                                                                    <Mail className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleEdit(user)}
+                                                                    title={t('Edit User')}
+                                                                >
+                                                                    <Edit2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        {canDelete && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDelete(user.id)}
+                                                                className="text-destructive hover:text-destructive"
+                                                                title={t('Delete User')}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                        {!canEdit && !canDelete && (
+                                                            <span className="text-muted-foreground text-sm">
+                                                                {t('No actions available')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                {t('No users found.')}
                                             </TableCell>
-                                            <TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            filteredUsers.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {filteredUsers.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className={`border rounded-lg p-4 flex flex-col gap-3 ${user.deleted_at ? 'opacity-50' : ''}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
+                                                        {user.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium truncate">{user.name}</p>
+                                                        <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                                                    </div>
+                                                </div>
+                                                {user.deleted_at ? (
+                                                    <Badge variant="destructive" className="shrink-0">{t('Deleted')}</Badge>
+                                                ) : user.is_active ? (
+                                                    <Badge variant="default" className="gap-1 shrink-0">
+                                                        <Check className="h-3 w-3" />
+                                                        {t('Active')}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="gap-1 shrink-0">
+                                                        <X className="h-3 w-3" />
+                                                        {t('Inactive')}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            {user.roles.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                     {user.roles.map((role, index) => (
-                                                        <Badge key={index} variant="outline">
+                                                        <Badge key={index} variant="outline" className="text-xs">
                                                             {role}
                                                         </Badge>
                                                     ))}
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {canEdit && (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleSendPasswordReset(user.id)}
-                                                                title={t('Send Password Reset Link')}
-                                                            >
-                                                                <Mail className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleEdit(user)}
-                                                                title={t('Edit User')}
-                                                            >
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    {canDelete && (
+                                            )}
+                                            <div className="flex items-center gap-1 mt-auto pt-1 border-t">
+                                                {canEdit && (
+                                                    <>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            onClick={() => handleDelete(user.id)}
-                                                            className="text-destructive hover:text-destructive"
-                                                            title={t('Delete User')}
+                                                            onClick={() => handleSendPasswordReset(user.id)}
+                                                            title={t('Send Password Reset Link')}
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            <Mail className="h-4 w-4" />
                                                         </Button>
-                                                    )}
-                                                    {!canEdit && !canDelete && (
-                                                        <span className="text-muted-foreground text-sm">
-                                                            {t('No actions available')}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                            {t('No users found.')}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleEdit(user)}
+                                                            title={t('Edit User')}
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {canDelete && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(user.id)}
+                                                        className="text-destructive hover:text-destructive"
+                                                        title={t('Delete User')}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    {t('No users found.')}
+                                </div>
+                            )
+                        )}
                     </CardContent>
                 </Card>
             </div>

@@ -11,6 +11,8 @@ import {
   SidebarRail,
 } from "@/Components/ui/sidebar"
 import { NavigationItem, User } from "@/types"
+import { usePage } from "@inertiajs/react"
+import { PageProps } from "@/types"
 import { useTranslation } from "@/lib/i18n"
 
 import { IconMapper } from "@/lib/icon-mapper"
@@ -32,6 +34,8 @@ export function AppSidebar({
     } 
 }) {
   const { t } = useTranslation();
+  const { auth } = usePage<PageProps>().props;
+  const unreadCount = auth.user?.unread_notifications_count ?? 0;
 
   const mapItems = (items: NavigationItem[]) => items.map(item => ({
     title: t(item.title_key || ''),
@@ -90,6 +94,7 @@ export function AppSidebar({
             avatar: user.avatar ? `/storage/${user.avatar}` : undefined
           }}
           items={userBlocks.flatMap(b => mapItems(b.items)).map(i => ({ title: i.title, url: i.url, icon: i.icon }))}
+          unreadCount={unreadCount}
         />
       </SidebarFooter>
       <SidebarRail />

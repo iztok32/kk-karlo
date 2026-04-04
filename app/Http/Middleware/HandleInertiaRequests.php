@@ -40,6 +40,13 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user ? array_merge($user->toArray(), [
                     'permissions' => $user->permissions,
                     'config' => $user->config ?? [],
+                    'unread_notifications_count' => \App\Models\Notification::where('type', 'portal')
+                        ->where(function ($q) use ($user) {
+                            $q->where('recipient_id', $user->id)
+                              ->orWhereNull('recipient_id');
+                        })
+                        ->whereNull('read_at')
+                        ->count(),
                 ]) : null,
             ],
             'locale' => app()->getLocale(),

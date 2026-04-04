@@ -41,6 +41,7 @@ export interface HorsemanType {
     name: string;
     display_order: number;
     is_active: boolean;
+    unread_notifications_count?: number;
 }
 
 export interface NavigationItem {

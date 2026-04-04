@@ -3,7 +3,8 @@ import { Head } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
 import { useState } from 'react';
 import { Button } from '@/Components/ui/button';
-import { Plus, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { Input } from '@/Components/ui/input';
+import { Plus, ChevronsDownUp, ChevronsUpDown, Search } from 'lucide-react';
 import {
     Sheet,
     SheetContent,
@@ -41,6 +42,7 @@ export default function Index({ groupedPermissions, standardPermissions }: Props
     const [editingPermission, setEditingPermission] = useState<Permission | undefined>(undefined);
     const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
     const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+    const [search, setSearch] = useState('');
 
     const handleCreate = (module?: string) => {
         setEditingPermission(undefined);
@@ -76,6 +78,26 @@ export default function Index({ groupedPermissions, standardPermissions }: Props
         );
     };
 
+    const filteredPermissions = search.trim() === ''
+        ? groupedPermissions
+        : groupedPermissions
+            .map(moduleData => ({
+                ...moduleData,
+                standard: moduleData.standard.filter(p =>
+                    p.name.toLowerCase().includes(search.toLowerCase()) ||
+                    p.slug.toLowerCase().includes(search.toLowerCase())
+                ),
+                custom: moduleData.custom.filter(p =>
+                    p.name.toLowerCase().includes(search.toLowerCase()) ||
+                    p.slug.toLowerCase().includes(search.toLowerCase())
+                ),
+            }))
+            .filter(moduleData =>
+                moduleData.module.toLowerCase().includes(search.toLowerCase()) ||
+                moduleData.standard.length > 0 ||
+                moduleData.custom.length > 0
+            );
+
     // Get all unique modules
     const allModules = groupedPermissions.map(g => g.module);
 
@@ -94,6 +116,15 @@ export default function Index({ groupedPermissions, standardPermissions }: Props
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                         <CardTitle>{t('Module Permissions')}</CardTitle>
                         <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder={t('Search permissions...')}
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="pl-9 h-9 w-56"
+                                />
+                            </div>
                             <Button
                                 onClick={handleExpandAll}
                                 size="sm"
@@ -120,8 +151,8 @@ export default function Index({ groupedPermissions, standardPermissions }: Props
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {groupedPermissions.length > 0 ? (
-                                groupedPermissions.map((moduleData) => (
+                            {filteredPermissions.length > 0 ? (
+                                filteredPermissions.map((moduleData) => (
                                     <PermissionCard
                                         key={moduleData.module}
                                         moduleData={moduleData}

@@ -286,10 +286,49 @@ class NotificationController extends Controller
         return back()->with('success', $message);
     }
 
+    public function inbox()
+    {
+        $notifications = Notification::where('type', 'portal')
+            ->where(function ($q) {
+                $q->where('recipient_id', auth()->id())
+                  ->orWhereNull('recipient_id');
+            })
+            ->with('sender')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id' => $notification->id,
+                    'sender' => $notification->sender?->name ?? __('System'),
+                    'subject' => $notification->subject,
+                    'message' => $notification->message,
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at,
+                ];
+            });
+
+        return Inertia::render('Core/Notifications/Inbox', [
+            'notifications' => $notifications,
+        ]);
+    }
+
+    public function markAllRead()
+    {
+        Notification::where('type', 'portal')
+            ->where(function ($q) {
+                $q->where('recipient_id', auth()->id())
+                  ->orWhereNull('recipient_id');
+            })
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return back()->with('success', __('All notifications marked as read'));
+    }
+
     public function markAsRead(Notification $notification)
     {
-        // Check if user is recipient
-        if ($notification->recipient_id !== auth()->id()) {
+        // Allow if user is the recipient, or if it's a broadcast (recipient_id = null)
+        if ($notification->recipient_id !== null && $notification->recipient_id !== auth()->id()) {
             abort(403, 'Unauthorized');
         }
 

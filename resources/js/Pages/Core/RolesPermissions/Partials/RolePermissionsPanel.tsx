@@ -12,7 +12,7 @@ import {
     SelectValue,
 } from '@/Components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/Components/ui/input';
 
 interface Role {
@@ -78,6 +78,17 @@ export default function RolePermissionsPanel({
     const [openAccordionsSidebar, setOpenAccordionsSidebar] = useState<string[]>([]);
     const [openAccordionsNonSidebar, setOpenAccordionsNonSidebar] = useState<string[]>([]);
     const [selectedModuleWebRoot, setSelectedModuleWebRoot] = useState<string>('');
+    const moduleRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+    useEffect(() => {
+        if (!selectedModuleWebRoot) return;
+        const module = sidebarPermissions.find(m => m.web_root?.replace(/^\//, '') === selectedModuleWebRoot);
+        if (!module) return;
+        const el = moduleRefs.current[module.module];
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [selectedModuleWebRoot]);
 
     const filteredRoles = roles.filter(role =>
         role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -226,6 +237,7 @@ export default function RolePermissionsPanel({
                                         sidebarPermissions.map((moduleData) => (
                                             <div
                                                 key={moduleData.module}
+                                                ref={el => { moduleRefs.current[moduleData.module] = el; }}
                                                 className={selectedModuleWebRoot && moduleData.web_root?.replace(/^\//, '') === selectedModuleWebRoot ? 'ring-2 ring-primary rounded-lg' : ''}
                                             >
                                                 <PermissionModuleCard

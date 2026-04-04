@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -96,14 +96,12 @@ export default function PortalNotificationForm({ users }: Props) {
     };
 
     const sendNotification = () => {
-        const formData = {
-            recipient_ids: sendToAll ? null : selectedUsers,
+        router.post(route('notifications.send-portal'), {
+            recipient_ids: selectedUsers,
             send_to_all: sendToAll,
             subject: data.subject,
             message: data.message,
-        };
-
-        post(route('notifications.send-portal'), formData, {
+        }, {
             preserveScroll: true,
             onSuccess: () => {
                 reset();
