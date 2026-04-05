@@ -91,6 +91,13 @@ class RolesAndPermissionsSeeder extends Seeder
             ['id' => 49, 'name' => 'Edit Roles-permissions', 'slug' => 'roles-permissions.edit', 'module' => 'roles-permissions', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 50, 'name' => 'Delete Roles-permissions', 'slug' => 'roles-permissions.delete', 'module' => 'roles-permissions', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 51, 'name' => 'Is global Roles-permissions', 'slug' => 'roles-permissions.is_global', 'module' => 'roles-permissions', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+
+            // Articles
+            ['id' => 52, 'name' => 'View Articles', 'slug' => 'articles.view', 'module' => 'articles', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 53, 'name' => 'Create Articles', 'slug' => 'articles.create', 'module' => 'articles', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 54, 'name' => 'Edit Articles', 'slug' => 'articles.edit', 'module' => 'articles', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 55, 'name' => 'Delete Articles', 'slug' => 'articles.delete', 'module' => 'articles', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 56, 'name' => 'Is global Articles', 'slug' => 'articles.is_global', 'module' => 'articles', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
         ];
 
         foreach ($permissions as $permission) {
@@ -113,7 +120,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ['role_id' => 1, 'permission_id' => 42], ['role_id' => 1, 'permission_id' => 43], ['role_id' => 1, 'permission_id' => 44],
             ['role_id' => 1, 'permission_id' => 45], ['role_id' => 1, 'permission_id' => 46], ['role_id' => 1, 'permission_id' => 47],
             ['role_id' => 1, 'permission_id' => 48], ['role_id' => 1, 'permission_id' => 49], ['role_id' => 1, 'permission_id' => 50],
-            ['role_id' => 1, 'permission_id' => 51],
+            ['role_id' => 1, 'permission_id' => 51], ['role_id' => 1, 'permission_id' => 52], ['role_id' => 1, 'permission_id' => 53],
+            ['role_id' => 1, 'permission_id' => 54], ['role_id' => 1, 'permission_id' => 55], ['role_id' => 1, 'permission_id' => 56],
 
             // Admin (role_id: 2)
             ['role_id' => 2, 'permission_id' => 1], ['role_id' => 2, 'permission_id' => 2], ['role_id' => 2, 'permission_id' => 3],
@@ -122,6 +130,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ['role_id' => 2, 'permission_id' => 20], ['role_id' => 2, 'permission_id' => 21], ['role_id' => 2, 'permission_id' => 30],
             ['role_id' => 2, 'permission_id' => 31], ['role_id' => 2, 'permission_id' => 32], ['role_id' => 2, 'permission_id' => 33],
             ['role_id' => 2, 'permission_id' => 47], ['role_id' => 2, 'permission_id' => 49],
+            ['role_id' => 2, 'permission_id' => 52], ['role_id' => 2, 'permission_id' => 53],
+            ['role_id' => 2, 'permission_id' => 54], ['role_id' => 2, 'permission_id' => 55],
 
             // User (role_id: 3)
             ['role_id' => 3, 'permission_id' => 1], ['role_id' => 3, 'permission_id' => 14], ['role_id' => 3, 'permission_id' => 30],

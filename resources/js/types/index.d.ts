@@ -44,6 +44,36 @@ export interface HorsemanType {
     unread_notifications_count?: number;
 }
 
+export interface ArticleAuthor {
+    id: number;
+    name: string;
+}
+
+export interface ArticleMedia {
+    id: number;
+    url: string;
+    thumb: string;
+    name: string;
+}
+
+export interface Article {
+    id: number;
+    title: string;
+    slug: string;
+    excerpt?: string | null;
+    content?: string | null;
+    status: 'draft' | 'published' | 'archived';
+    is_public: boolean;
+    published_at?: string | null;
+    created_at: string;
+    updated_at: string;
+    deleted_at?: string | null;
+    author: ArticleAuthor;
+    featured_image?: string;
+    featured_image_thumb?: string;
+    gallery: ArticleMedia[];
+}
+
 export interface NavigationItem {
     id: number;
     parent_id?: number | null;

@@ -101,6 +101,23 @@ Route::middleware('auth')->group(function () {
     Route::post('notifications/mark-all-read', [\App\Http\Controllers\Core\NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     Route::post('notifications/{notification}/read', [\App\Http\Controllers\Core\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
 
+    // Articles routes with permission middleware
+    Route::middleware('permission:articles.view')->group(function () {
+        Route::get('articles', [\App\Http\Controllers\Core\ArticlesController::class, 'index'])->name('articles.index');
+    });
+    Route::middleware('permission:articles.create')->group(function () {
+        Route::post('articles', [\App\Http\Controllers\Core\ArticlesController::class, 'store'])->name('articles.store');
+    });
+    Route::middleware('permission:articles.edit')->group(function () {
+        Route::put('articles/{article}', [\App\Http\Controllers\Core\ArticlesController::class, 'update'])->name('articles.update');
+        Route::patch('articles/{article}', [\App\Http\Controllers\Core\ArticlesController::class, 'update']);
+        Route::post('articles/{article}/media', [\App\Http\Controllers\Core\ArticlesController::class, 'uploadMedia'])->name('articles.media.upload');
+        Route::delete('articles/{article}/media/{mediaId}', [\App\Http\Controllers\Core\ArticlesController::class, 'deleteMedia'])->name('articles.media.delete');
+    });
+    Route::middleware('permission:articles.delete')->group(function () {
+        Route::delete('articles/{article}', [\App\Http\Controllers\Core\ArticlesController::class, 'destroy'])->name('articles.destroy');
+    });
+
     Route::get('user/config', [\App\Http\Controllers\UserConfigController::class, 'show'])->name('user.config.show');
     Route::post('user/config', [\App\Http\Controllers\UserConfigController::class, 'update'])->name('user.config.update');
     Route::post('user/config/batch', [\App\Http\Controllers\UserConfigController::class, 'updateBatch'])->name('user.config.batch');

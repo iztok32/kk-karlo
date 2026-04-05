@@ -25,6 +25,7 @@ class ModulesSeeder extends Seeder
             ['id' => 15, 'name' => 'horseman', 'web_root' => '/horseman', 'description' => 'Tipi jahačev.', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 16, 'name' => 'appointment', 'web_root' => '/appointment', 'description' => 'Termini za jahanje.', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 17, 'name' => 'reservations', 'web_root' => '/reservations', 'description' => 'Rezervacije terminov za jahanje.', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 18, 'name' => 'articles', 'web_root' => '/articles', 'description' => 'Upravljanje členkov - dodajanje, urejanje, brisanje in objava HTML vsebine', 'created_at' => now(), 'updated_at' => now()],
         ];
 
         foreach ($modules as $module) {

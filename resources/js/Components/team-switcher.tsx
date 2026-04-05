@@ -40,6 +40,39 @@ export function TeamSwitcher({
     return null
   }
 
+  const logoContent = (
+    <>
+      <div className={cn(
+        "flex aspect-square size-8 items-center justify-center rounded-lg",
+        !activeTeam.isLogo && "bg-sidebar-primary text-sidebar-primary-foreground"
+      )}>
+        {activeTeam.logoUrl ? (
+          <img src={activeTeam.logoUrl} alt={activeTeam.name} className="size-4 object-contain" />
+        ) : activeTeam.logo && (
+          <activeTeam.logo className="size-4" />
+        )}
+      </div>
+      <div className="grid flex-1 text-left text-sm leading-tight">
+        <span className="truncate font-semibold">
+          {activeTeam.name}
+        </span>
+        <span className="truncate text-xs">{activeTeam.plan}</span>
+      </div>
+    </>
+  )
+
+  if (teams.length === 1) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg">
+            {logoContent}
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -49,23 +82,8 @@ export function TeamSwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className={cn(
-                "flex aspect-square size-8 items-center justify-center rounded-lg",
-                !activeTeam.isLogo && "bg-sidebar-primary text-sidebar-primary-foreground"
-              )}>
-                {activeTeam.logoUrl ? (
-                  <img src={activeTeam.logoUrl} alt={activeTeam.name} className="size-4 object-contain" />
-                ) : activeTeam.logo && (
-                  <activeTeam.logo className="size-4" />
-                )}
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {activeTeam.name}
-                </span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
-              </div>
-              {teams.length > 1 && <ChevronsUpDown className="ml-auto" />}
+              {logoContent}
+              <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
