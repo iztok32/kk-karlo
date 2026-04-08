@@ -11,6 +11,8 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
+        'activeMembers' => \App\Models\User::where('is_active', true)->count(),
+        'activeHorses' => \App\Models\Horse::where('is_active', true)->count(),
     ]);
 });
 

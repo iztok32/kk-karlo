@@ -1,36 +1,28 @@
-# ─── Stage 1: Build frontend assets ──────────────────────────────────────────
-FROM node:20-alpine AS node-builder
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --frozen-lockfile
-
-COPY . .
-RUN npm run build
-
-# ─── Stage 2: Production image ────────────────────────────────────────────────
-FROM php:8.4-fpm-alpine AS production
+# ─── Production image ─────────────────────────────────────────────────────────
+# Frontend assets (public/build/) must be compiled locally before building:
+#   npm run build
+#   docker compose up --build
+FROM php:8.4-fpm AS production
 
 LABEL maintainer="Iztok Vozlič"
 LABEL org.opencontainers.image.source="https://github.com/iztok32/kk-karlo"
 
 # System dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
-    postgresql-dev \
+    libpq-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
+    libjpeg62-turbo-dev \
     libwebp-dev \
-    freetype-dev \
+    libfreetype6-dev \
     libzip-dev \
-    icu-dev \
+    libicu-dev \
     zip \
     unzip \
     curl \
-    bash \
-    shadow
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # PHP extensions
 RUN docker-php-ext-configure gd \
@@ -63,11 +55,8 @@ RUN composer install \
     --optimize-autoloader \
     --prefer-dist
 
-# Copy application source
+# Copy application source (includes pre-built public/build/)
 COPY . .
-
-# Copy compiled frontend assets from node-builder
-COPY --from=node-builder /app/public/build ./public/build
 
 # Finalize composer autoloader
 RUN composer dump-autoload --optimize --no-dev
@@ -78,7 +67,7 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
 # Copy Docker configs
-COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+COPY docker/nginx/default.conf /etc/nginx/sites-available/default
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/php.ini /usr/local/etc/php/conf.d/99-app.ini
 COPY docker/entrypoint.sh /entrypoint.sh

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Club;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Horse;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,7 +14,7 @@ class AppointmentController extends Controller
 {
     public function index()
     {
-        $appointments = Appointment::with('horses:id')
+        $appointments = Appointment::with('horses:id', 'teachers:id')
             ->orderBy('display_order')
             ->orderBy('name')
             ->get()
@@ -35,15 +37,23 @@ class AppointmentController extends Controller
                 'display_order' => $a->display_order,
                 'is_active'     => $a->is_active,
                 'horse_ids'     => $a->horses->pluck('id')->toArray(),
+                'teacher_ids'   => $a->teachers->pluck('id')->toArray(),
             ]);
 
         $horses = Horse::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $teachers = User::where('is_active', true)
+            ->whereNull('deleted_at')
+            ->whereHas('roles', fn($q) => $q->where('slug', 'ucitelj'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Club/Appointment/Index', [
             'appointments' => $appointments,
             'horses'       => $horses,
+            'teachers'     => $teachers,
         ]);
     }
 
@@ -65,17 +75,21 @@ class AppointmentController extends Controller
             'capacity'      => 'nullable|integer|min:1',
             'type'          => 'nullable|integer',
             'is_active'     => 'boolean',
-            'horse_ids'     => 'nullable|array',
-            'horse_ids.*'   => 'exists:horses,id',
+            'horse_ids'      => 'nullable|array',
+            'horse_ids.*'    => 'exists:horses,id',
+            'teacher_ids'    => 'nullable|array',
+            'teacher_ids.*'  => 'exists:users,id',
         ]);
 
-        $horseIds = $validated['horse_ids'] ?? [];
-        unset($validated['horse_ids']);
+        $horseIds   = $validated['horse_ids'] ?? [];
+        $teacherIds = $validated['teacher_ids'] ?? [];
+        unset($validated['horse_ids'], $validated['teacher_ids']);
 
         $validated['display_order'] = Appointment::max('display_order') + 1;
 
         $appointment = Appointment::create($validated);
         $appointment->horses()->sync($horseIds);
+        $appointment->teachers()->sync($teacherIds);
 
         return redirect()->back()->with('success', __('Appointment successfully added.'));
     }
@@ -98,15 +112,19 @@ class AppointmentController extends Controller
             'capacity'      => 'nullable|integer|min:1',
             'type'          => 'nullable|integer',
             'is_active'     => 'boolean',
-            'horse_ids'     => 'nullable|array',
-            'horse_ids.*'   => 'exists:horses,id',
+            'horse_ids'      => 'nullable|array',
+            'horse_ids.*'    => 'exists:horses,id',
+            'teacher_ids'    => 'nullable|array',
+            'teacher_ids.*'  => 'exists:users,id',
         ]);
 
-        $horseIds = $validated['horse_ids'] ?? [];
-        unset($validated['horse_ids']);
+        $horseIds   = $validated['horse_ids'] ?? [];
+        $teacherIds = $validated['teacher_ids'] ?? [];
+        unset($validated['horse_ids'], $validated['teacher_ids']);
 
         $appointment->update($validated);
         $appointment->horses()->sync($horseIds);
+        $appointment->teachers()->sync($teacherIds);
 
         return redirect()->back()->with('success', __('Appointment successfully updated.'));
     }

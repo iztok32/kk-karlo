@@ -64,6 +64,11 @@ interface HorseItem {
   name: string;
 }
 
+interface TeacherItem {
+  id: number;
+  name: string;
+}
+
 interface Appointment {
   id: number;
   name: string;
@@ -83,11 +88,13 @@ interface Appointment {
   display_order: number;
   is_active: boolean;
   horse_ids: number[];
+  teacher_ids: number[];
 }
 
 interface Props {
   appointments: Appointment[];
   horses: HorseItem[];
+  teachers: TeacherItem[];
 }
 
 const DaysRow = ({ item }: { item: Appointment }) => {
@@ -124,11 +131,13 @@ const DaysRow = ({ item }: { item: Appointment }) => {
 function SortableRow({
   item,
   horses,
+  teachers,
   onEdit,
   onDelete,
 }: {
   item: Appointment;
   horses: HorseItem[];
+  teachers: TeacherItem[];
   onEdit: (item: Appointment) => void;
   onDelete: (item: Appointment) => void;
 }) {
@@ -214,6 +223,20 @@ function SortableRow({
         )}
       </TableCell>
       <TableCell>
+        {item.teacher_ids.length === 0 ? (
+          <span className="text-xs text-muted-foreground italic">—</span>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {item.teacher_ids.map((id) => {
+              const tc = teachers.find(tc => tc.id === id);
+              return tc ? (
+                <span key={id} className="text-xs bg-muted px-1.5 py-0.5 rounded">{tc.name}</span>
+              ) : null;
+            })}
+          </div>
+        )}
+      </TableCell>
+      <TableCell>
         <div className="flex justify-center">
           {item.is_active ? (
             <Check className="h-4 w-4 text-green-500" />
@@ -243,7 +266,7 @@ function SortableRow({
   );
 }
 
-export default function Index({ appointments: initialItems, horses }: Props) {
+export default function Index({ appointments: initialItems, horses, teachers }: Props) {
   const { t, locale } = useTranslation();
   const [localItems, setLocalItems] = useState(initialItems);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -299,6 +322,7 @@ export default function Index({ appointments: initialItems, horses }: Props) {
     type: number | null;
     is_active: boolean;
     horse_ids: number[];
+    teacher_ids: number[];
   }
 
   const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm<AppointmentForm>({
@@ -318,6 +342,7 @@ export default function Index({ appointments: initialItems, horses }: Props) {
     type: 1,
     is_active: true,
     horse_ids: [],
+    teacher_ids: [],
   });
 
   const allHorseIds = horses.map(h => h.id);
@@ -332,6 +357,13 @@ export default function Index({ appointments: initialItems, horses }: Props) {
 
   const toggleAll = () => {
     setData('horse_ids', allSelected ? [] : allHorseIds);
+  };
+
+  const toggleTeacher = (id: number) => {
+    setData('teacher_ids', data.teacher_ids.includes(id)
+      ? data.teacher_ids.filter(tid => tid !== id)
+      : [...data.teacher_ids, id]
+    );
   };
 
   const openAddDialog = () => {
@@ -360,6 +392,7 @@ export default function Index({ appointments: initialItems, horses }: Props) {
       type: item.type,
       is_active: item.is_active,
       horse_ids: item.horse_ids,
+      teacher_ids: item.teacher_ids,
     });
     clearErrors();
     setIsDialogOpen(true);
@@ -484,6 +517,7 @@ export default function Index({ appointments: initialItems, horses }: Props) {
                         <TableHead>{t('Validity')}</TableHead>
                         <TableHead className="w-[80px] text-center">{t('Capacity')}</TableHead>
                         <TableHead>{t('Horses')}</TableHead>
+                        <TableHead>{t('Teachers')}</TableHead>
                         <TableHead className="w-[100px] text-center">{t('Active')}</TableHead>
                         <TableHead className="w-[100px] text-center">{t('Actions')}</TableHead>
                       </TableRow>
@@ -491,7 +525,7 @@ export default function Index({ appointments: initialItems, horses }: Props) {
                     <TableBody>
                       {filteredItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-4 text-muted-foreground italic">
+                          <TableCell colSpan={9} className="text-center py-4 text-muted-foreground italic">
                             {searchTerm 
                               ? t('No appointments found matching ":search".', { search: searchTerm }) 
                               : (showActive ? t('No active appointments found.') : t('No inactive appointments found.'))}
@@ -507,6 +541,7 @@ export default function Index({ appointments: initialItems, horses }: Props) {
                               key={item.id}
                               item={item}
                               horses={horses}
+                              teachers={teachers}
                               onEdit={openEditDialog}
                               onDelete={handleDelete}
                             />
@@ -718,6 +753,30 @@ export default function Index({ appointments: initialItems, horses }: Props) {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {data.horse_ids.length === 0 ? t('No selection = all horses available') : `${data.horse_ids.length} / ${horses.length} ${t('selected')}`}
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>{t('Teachers')}</Label>
+                <div className="border rounded-md p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                  {teachers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic col-span-full">{t('No teachers available.')}</p>
+                  ) : (
+                    teachers.map(tc => (
+                      <label key={tc.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={data.teacher_ids.includes(tc.id)}
+                          onChange={() => toggleTeacher(tc.id)}
+                          className="rounded border-gray-300"
+                        />
+                        {tc.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {data.teacher_ids.length === 0 ? t('No selection = no assigned teacher') : `${data.teacher_ids.length} ${t('selected')}`}
                 </p>
               </div>
 

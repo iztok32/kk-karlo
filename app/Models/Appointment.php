@@ -33,6 +33,11 @@ class Appointment extends Model
         return $this->belongsToMany(Horse::class, 'appointment_horse');
     }
 
+    public function teachers()
+    {
+        return $this->belongsToMany(User::class, 'appointment_teacher');
+    }
+
     protected $casts = [
         'valid_from' => 'date',
         'valid_to' => 'date',
