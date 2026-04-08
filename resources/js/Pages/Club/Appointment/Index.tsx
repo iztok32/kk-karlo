@@ -69,12 +69,15 @@ interface TeacherItem {
   name: string;
 }
 
+<<<<<<< HEAD
 interface AppointmentTypeItem {
   id: number;
   name: string;
   horses_selectable: boolean;
 }
 
+=======
+>>>>>>> 850a8ce3 (Urejanje vmesnika in dockerizacija)
 interface Appointment {
   id: number;
   name: string;
@@ -101,7 +104,10 @@ interface Props {
   appointments: Appointment[];
   horses: HorseItem[];
   teachers: TeacherItem[];
+<<<<<<< HEAD
   appointmentTypes: AppointmentTypeItem[];
+=======
+>>>>>>> 850a8ce3 (Urejanje vmesnika in dockerizacija)
 }
 
 const DaysRow = ({ item }: { item: Appointment }) => {
@@ -139,14 +145,20 @@ function SortableRow({
   item,
   horses,
   teachers,
+<<<<<<< HEAD
   appointmentTypes,
+=======
+>>>>>>> 850a8ce3 (Urejanje vmesnika in dockerizacija)
   onEdit,
   onDelete,
 }: {
   item: Appointment;
   horses: HorseItem[];
   teachers: TeacherItem[];
+<<<<<<< HEAD
   appointmentTypes: AppointmentTypeItem[];
+=======
+>>>>>>> 850a8ce3 (Urejanje vmesnika in dockerizacija)
   onEdit: (item: Appointment) => void;
   onDelete: (item: Appointment) => void;
 }) {
@@ -270,7 +282,11 @@ function SortableRow({
   );
 }
 
+<<<<<<< HEAD
 export default function Index({ appointments: initialItems, horses, teachers, appointmentTypes }: Props) {
+=======
+export default function Index({ appointments: initialItems, horses, teachers }: Props) {
+>>>>>>> 850a8ce3 (Urejanje vmesnika in dockerizacija)
   const { t, locale } = useTranslation();
   const [localItems, setLocalItems] = useState(initialItems);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -625,7 +641,10 @@ export default function Index({ appointments: initialItems, horses, teachers, ap
                               item={item}
                               horses={horses}
                               teachers={teachers}
+<<<<<<< HEAD
                               appointmentTypes={appointmentTypes}
+=======
+>>>>>>> 850a8ce3 (Urejanje vmesnika in dockerizacija)
                               onEdit={openEditDialog}
                               onDelete={handleDelete}
                             />
@@ -879,6 +898,38 @@ export default function Index({ appointments: initialItems, horses, teachers, ap
                 </div>
               </div>
 
+              <div className="grid gap-2">
+                <Label>{t('Teachers')}</Label>
+                <div className="border rounded-md p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                  {teachers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic col-span-full">{t('No teachers available.')}</p>
+                  ) : (
+                    teachers.map(tc => (
+                      <label key={tc.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={data.teacher_ids.includes(tc.id)}
+                          onChange={() => toggleTeacher(tc.id)}
+                          className="rounded border-gray-300"
+                        />
+                        {tc.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {data.teacher_ids.length === 0 ? t('No selection = no assigned teacher') : `${data.teacher_ids.length} ${t('selected')}`}
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_active"
+                  checked={data.is_active}
+                  onCheckedChange={(checked) => setData('is_active', checked)}
+                />
+                <Label htmlFor="is_active">{t('Active')}</Label>
+              </div>
             </div>
 
             <DialogFooter className="shrink-0 pt-2">

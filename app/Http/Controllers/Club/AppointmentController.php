@@ -47,25 +47,14 @@ class AppointmentController extends Controller
 
         $teachers = User::where('is_active', true)
             ->whereNull('deleted_at')
-            ->where('is_teacher', true)
+            ->whereHas('roles', fn($q) => $q->where('slug', 'ucitelj'))
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $appointmentTypes = AppointmentType::where('is_active', true)
-            ->orderBy('display_order')
-            ->orderBy('name')
-            ->get(['id', 'name', 'horses_selectable']);
-
-        $user = auth()->user();
-
         return Inertia::render('Club/Appointment/Index', [
-            'appointments'     => $appointments,
-            'horses'           => $horses,
-            'teachers'         => $teachers,
-            'appointmentTypes' => $appointmentTypes,
-            'canCreate'        => $user->hasPermission('appointments.create'),
-            'canEdit'          => $user->hasPermission('appointments.edit'),
-            'canDelete'        => $user->hasPermission('appointments.delete'),
+            'appointments' => $appointments,
+            'horses'       => $horses,
+            'teachers'     => $teachers,
         ]);
     }
 
