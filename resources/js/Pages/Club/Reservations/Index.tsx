@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/Components/ui/dialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/Components/ui/context-menu';
 import { Label } from '@/Components/ui/label';
 import {
   Select,
@@ -17,6 +26,7 @@ import {
   SelectValue,
 } from '@/Components/ui/select';
 import { Textarea } from '@/Components/ui/textarea';
+import { Badge } from '@/Components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import { useForm, Head, router } from '@inertiajs/react';
 import React, { useState, useMemo } from 'react';
@@ -29,6 +39,10 @@ import {
   Trash2,
   Plus,
   AlertCircle,
+  Bell,
+  Mail,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import {
@@ -100,6 +114,12 @@ interface UserItem {
   name: string;
 }
 
+interface ReservationLimits {
+  minDaysInAdvance: number;
+  maxDaysInAdvance: number | null;
+  isAdmin: boolean;
+}
+
 interface Props {
   appointments: Appointment[];
   reservations: Reservation[];
@@ -111,6 +131,17 @@ interface Props {
   currentView: string;
   authUserId: number;
   myUpcoming: ReservationWithAppointment[];
+  reservationLimits: ReservationLimits;
+  canNotifySlots: boolean;
+  myTeacherAppointmentIds: number[];
+  enabledChannels: ('portal' | 'email' | 'sms')[];
+}
+
+interface NotifySlot {
+  appointment: Appointment;
+  date: Date;
+  channel: 'portal' | 'email' | 'sms';
+  recipientIds: number[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -174,16 +205,31 @@ interface SlotChipProps {
   authUserId: number;
   onClick: () => void;
   compact?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
+  isTeacherSlot?: boolean;
+  canNotify?: boolean;
+  enabledChannels?: ('portal' | 'email' | 'sms')[];
+  onNotify?: (channel: 'portal' | 'email' | 'sms') => void;
 }
 
-function SlotChip({ appointment, date, reservations, authUserId, onClick, compact = false }: SlotChipProps) {
+function SlotChip({ appointment, date, reservations, authUserId, onClick, compact = false, disabled = false, disabledReason, isTeacherSlot = false, canNotify = false, enabledChannels = [], onNotify }: SlotChipProps) {
   const count = reservations.length;
   const capacity = appointment.capacity;
   const isFull = capacity !== null && count >= capacity;
   const isNearFull = capacity !== null && count / capacity >= 0.7;
   const userHasReservation = reservations.some((r) => r.user_id === authUserId);
+  const isDisabled = disabled || (isFull && !userHasReservation);
 
-  const colorClass = isFull
+  const colorClass = disabled
+    ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-70'
+    : isTeacherSlot
+    ? isFull
+      ? 'bg-purple-100 text-purple-700 border-purple-300 opacity-80'
+      : isNearFull
+      ? 'bg-purple-100 text-purple-700 border-purple-300'
+      : 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100'
+    : isFull
     ? 'bg-red-100 text-red-700 border-red-200 opacity-80'
     : isNearFull
     ? 'bg-amber-100 text-amber-700 border-amber-200'
@@ -191,90 +237,129 @@ function SlotChip({ appointment, date, reservations, authUserId, onClick, compac
 
   const label = capacity !== null ? (isFull ? 'POLNO' : `${count}/${capacity}`) : `${count}`;
 
-  if (compact) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onClick}
-            disabled={isFull && !userHasReservation}
-            className={cn(
-              'w-full text-left text-xs px-1.5 py-0.5 rounded border',
-              colorClass,
-              isFull && !userHasReservation ? 'cursor-default' : 'cursor-pointer',
-            )}
-          >
-            <div className="flex items-center gap-1 truncate">
-              {appointment.start_time && (
-                <span className="font-medium shrink-0">{formatTime(appointment.start_time)}</span>
-              )}
-              <span className="truncate">{appointment.name}</span>
-              <span className="font-semibold shrink-0">{label}</span>
-              {userHasReservation && <span className="shrink-0">✓</span>}
-            </div>
-            {reservations.length > 0 && (
-              <div className="flex flex-wrap gap-x-1 mt-0.5">
-                {reservations.map((r) => (
-                  <span key={r.id} className="truncate opacity-80">🐴 {r.horse.name}</span>
-                ))}
-              </div>
-            )}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="font-medium">{appointment.name}</p>
-          {appointment.start_time && (
-            <p className="text-xs opacity-75">
-              {formatTime(appointment.start_time)}
-              {appointment.end_time && ` – ${formatTime(appointment.end_time)}`}
-            </p>
+  const chipButton = compact ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={isDisabled ? undefined : onClick}
+          className={cn(
+            'w-full text-left text-xs px-1.5 py-0.5 rounded border',
+            colorClass,
+            isDisabled ? 'cursor-default' : 'cursor-pointer',
           )}
-          <p className="text-xs">
-            {isFull ? 'Polno zasedeno' : `${count} / ${capacity ?? '∞'} rezervacij`}
+        >
+          <div className="flex items-center gap-1 truncate">
+            {appointment.start_time && (
+              <span className="font-medium shrink-0">{formatTime(appointment.start_time)}</span>
+            )}
+            <span className="truncate">{appointment.name}</span>
+            <span className="font-semibold shrink-0">{label}</span>
+            {userHasReservation && <span className="shrink-0">✓</span>}
+            {isTeacherSlot && <span className="shrink-0 opacity-60">★</span>}
+          </div>
+          {reservations.length > 0 && (
+            <div className="flex flex-wrap gap-x-1 mt-0.5">
+              {reservations.map((r) => (
+                <span key={r.id} className="truncate opacity-80">🐴 {r.horse.name}</span>
+              ))}
+            </div>
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p className="font-medium">{appointment.name}</p>
+        {appointment.start_time && (
+          <p className="text-xs opacity-75">
+            {formatTime(appointment.start_time)}
+            {appointment.end_time && ` – ${formatTime(appointment.end_time)}`}
           </p>
-          {reservations.map((r) => (
-            <p key={r.id} className="text-xs">🐴 {r.horse.name}</p>
-          ))}
-          {userHasReservation && <p className="text-xs font-medium">✓ Imate rezervacijo</p>}
+        )}
+        <p className="text-xs">
+          {isFull ? 'Polno zasedeno' : `${count} / ${capacity ?? '∞'} rezervacij`}
+        </p>
+        {reservations.map((r) => (
+          <p key={r.id} className="text-xs">🐴 {r.horse.name}</p>
+        ))}
+        {userHasReservation && <p className="text-xs font-medium">✓ Imate rezervacijo</p>}
+        {isTeacherSlot && <p className="text-xs opacity-70">★ Vaš termin</p>}
+        {disabledReason && <p className="text-xs text-amber-300 mt-1">⚠ {disabledReason}</p>}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={isDisabled ? undefined : onClick}
+          className={cn(
+            'w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors',
+            colorClass,
+            isDisabled ? 'cursor-default' : 'cursor-pointer',
+          )}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {appointment.start_time && (
+                <span className="flex items-center gap-1 font-semibold whitespace-nowrap">
+                  <Clock className="w-3.5 h-3.5" />
+                  {formatTime(appointment.start_time)}
+                  {appointment.end_time && ` – ${formatTime(appointment.end_time)}`}
+                </span>
+              )}
+              <span className="font-medium truncate">{appointment.name}</span>
+              {isTeacherSlot && <span className="text-xs opacity-60">★</span>}
+            </div>
+            <span className="font-bold whitespace-nowrap text-xs">
+              {isFull ? 'POLNO' : `${count} / ${capacity ?? '∞'}`}
+              {userHasReservation && ' ✓'}
+            </span>
+          </div>
+          {reservations.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 mt-1.5">
+              {reservations.map((r) => (
+                <span key={r.id} className="text-xs opacity-80">🐴 {r.horse.name}</span>
+              ))}
+            </div>
+          )}
+        </button>
+      </TooltipTrigger>
+      {disabledReason && (
+        <TooltipContent>
+          <p className="text-xs">⚠ {disabledReason}</p>
         </TooltipContent>
-      </Tooltip>
-    );
-  }
+      )}
+    </Tooltip>
+  );
+
+  if (!canNotify || enabledChannels.length === 0) return chipButton;
 
   return (
-    <button
-      onClick={onClick}
-      disabled={isFull && !userHasReservation}
-      className={cn(
-        'w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors',
-        colorClass,
-        isFull && !userHasReservation ? 'cursor-default' : 'cursor-pointer',
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {appointment.start_time && (
-            <span className="flex items-center gap-1 font-semibold whitespace-nowrap">
-              <Clock className="w-3.5 h-3.5" />
-              {formatTime(appointment.start_time)}
-              {appointment.end_time && ` – ${formatTime(appointment.end_time)}`}
-            </span>
-          )}
-          <span className="font-medium truncate">{appointment.name}</span>
-        </div>
-        <span className="font-bold whitespace-nowrap text-xs">
-          {isFull ? 'POLNO' : `${count} / ${capacity ?? '∞'}`}
-          {userHasReservation && ' ✓'}
-        </span>
-      </div>
-      {reservations.length > 0 && (
-        <div className="flex flex-wrap gap-x-3 mt-1.5">
-          {reservations.map((r) => (
-            <span key={r.id} className="text-xs opacity-80">🐴 {r.horse.name}</span>
-          ))}
-        </div>
-      )}
-    </button>
+    <ContextMenu>
+      <ContextMenuTrigger>{chipButton}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuLabel className="text-xs text-muted-foreground">
+          {appointment.name} · {count} {count === 1 ? 'rezervacija' : 'rezervacij'}
+        </ContextMenuLabel>
+        <ContextMenuSeparator />
+        {enabledChannels.includes('portal') && (
+          <ContextMenuItem onClick={() => onNotify?.('portal')}>
+            <Bell className="mr-2 h-4 w-4" />
+            Pošlji portalno obvestilo
+          </ContextMenuItem>
+        )}
+        {enabledChannels.includes('email') && (
+          <ContextMenuItem onClick={() => onNotify?.('email')}>
+            <Mail className="mr-2 h-4 w-4" />
+            Pošlji e-mail
+          </ContextMenuItem>
+        )}
+        {enabledChannels.includes('sms') && (
+          <ContextMenuItem onClick={() => onNotify?.('sms')}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Pošlji SMS
+          </ContextMenuItem>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -291,6 +376,10 @@ export default function Index({
   currentView,
   authUserId,
   myUpcoming,
+  reservationLimits = { minDaysInAdvance: 0, maxDaysInAdvance: null, isAdmin: false },
+  canNotifySlots = false,
+  myTeacherAppointmentIds = [],
+  enabledChannels = [],
 }: Props) {
   const { t, locale } = useTranslation();
   const dateFnsLocale = LOCALE_MAP[locale] ?? sl;
@@ -321,6 +410,16 @@ export default function Index({
     user_id: String(authUserId),
     reservation_date: '',
     notes: '',
+  });
+
+  // ── Notify slot dialog state ────────────────────────────────────────────────
+  const [notifySlot, setNotifySlot] = useState<NotifySlot | null>(null);
+
+  const { data: notifyData, setData: setNotifyData, post: postNotify, processing: notifyProcessing, reset: resetNotify, errors: notifyErrors } = useForm({
+    subject: '',
+    message: '',
+    recipient_ids: [] as number[],
+    send_to_all: false,
   });
 
   // ── Computed calendar days ──────────────────────────────────────────────────
@@ -419,6 +518,27 @@ export default function Index({
 
   // ── Dialog handlers ─────────────────────────────────────────────────────────
 
+  function getDateRestrictionMessage(date: Date): string | null {
+    if (reservationLimits.isAdmin) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(date);
+    target.setHours(0, 0, 0, 0);
+    const daysAhead = Math.round((target.getTime() - today.getTime()) / 86400000);
+
+    const { minDaysInAdvance, maxDaysInAdvance } = reservationLimits;
+
+    if (daysAhead < minDaysInAdvance) {
+      if (minDaysInAdvance === 0) return t('Reservations cannot be made for past dates.');
+      return t('You can only make a reservation at least :count days in advance.', { count: minDaysInAdvance });
+    }
+    if (maxDaysInAdvance !== null && daysAhead > maxDaysInAdvance) {
+      return t('You can only make a reservation up to :count days in advance.', { count: maxDaysInAdvance });
+    }
+    return null;
+  }
+
   function openSlot(appointment: Appointment, date: Date) {
     setSelectedSlot({ appointment, date });
     setData({
@@ -444,6 +564,54 @@ export default function Index({
     });
   }
 
+  function openNotifyDialog(appointment: Appointment, date: Date, channel: 'portal' | 'email' | 'sms') {
+    const slotRes = getSlotReservations(appointment.id, date);
+    const recipientIds = slotRes.map(r => r.user_id);
+
+    const dateStr = format(date, 'EEEE, d. MMMM yyyy', { locale: dateFnsLocale });
+    const timeStr = appointment.start_time
+      ? `${formatTime(appointment.start_time)}${appointment.end_time ? ` – ${formatTime(appointment.end_time)}` : ''}`
+      : '';
+
+    const defaultSubject = `${appointment.name}${timeStr ? ` – ${timeStr}` : ''} – ${dateStr}`;
+    const defaultMessage = `${appointment.name}\n${timeStr ? `Ura: ${timeStr}\n` : ''}Datum: ${dateStr}\n\n`;
+
+    setNotifySlot({ appointment, date, channel, recipientIds });
+    setNotifyData({
+      subject: defaultSubject,
+      message: defaultMessage,
+      recipient_ids: recipientIds,
+      send_to_all: false,
+    });
+  }
+
+  function closeNotifyDialog() {
+    setNotifySlot(null);
+    resetNotify();
+  }
+
+  function handleNotifySubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!notifySlot) return;
+
+    const routeMap = {
+      portal: 'notifications.send-portal',
+      email: 'notifications.send-email',
+      sms: 'notifications.send-sms',
+    };
+
+    postNotify(route(routeMap[notifySlot.channel]), {
+      onSuccess: () => closeNotifyDialog(),
+      preserveScroll: true,
+    });
+  }
+
+  function canNotifyAppointment(appointmentId: number): boolean {
+    if (!canNotifySlots) return false;
+    if (reservationLimits.isAdmin) return true;
+    return myTeacherAppointmentIds.includes(appointmentId);
+  }
+
   function handleCancel(reservationId: number) {
     if (!confirm(t('Are you sure you want to cancel this reservation?'))) return;
     router.delete(route('reservations.destroy', reservationId), {
@@ -461,6 +629,9 @@ export default function Index({
       <div className="flex flex-col gap-0.5 mt-1">
         {dayAppts.map((appt) => {
           const slotRes = getSlotReservations(appt.id, date);
+          const restriction = getDateRestrictionMessage(date);
+          const isTeacherSlot = myTeacherAppointmentIds.includes(appt.id);
+          const canNotifyThis = canNotifyAppointment(appt.id);
           return (
             <SlotChip
               key={appt.id}
@@ -468,8 +639,14 @@ export default function Index({
               date={date}
               reservations={slotRes}
               authUserId={authUserId}
-              onClick={() => openSlot(appt, date)}
+              onClick={() => restriction ? null : openSlot(appt, date)}
               compact={compact}
+              disabled={!!restriction}
+              disabledReason={restriction ?? undefined}
+              isTeacherSlot={isTeacherSlot}
+              canNotify={canNotifyThis}
+              enabledChannels={enabledChannels}
+              onNotify={(channel) => openNotifyDialog(appt, date, channel)}
             />
           );
         })}
@@ -802,6 +979,20 @@ export default function Index({
 
           {selectedSlot && (
             <form onSubmit={handleReserve} className="space-y-4 pt-2">
+              {/* Date restriction warning */}
+              {getDateRestrictionMessage(selectedSlot.date) && (
+                <div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-amber-800 dark:text-amber-300">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{getDateRestrictionMessage(selectedSlot.date)}</span>
+                </div>
+              )}
+              {/* errors.reservation_date from backend */}
+              {errors.reservation_date && (
+                <div className="flex items-start gap-2 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 text-red-700 dark:text-red-300">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{errors.reservation_date}</span>
+                </div>
+              )}
               {/* Capacity info */}
               {selectedSlot.appointment.capacity && (
                 <div className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-2">
@@ -950,6 +1141,101 @@ export default function Index({
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Notify Slot Dialog ── */}
+      <Dialog open={!!notifySlot} onOpenChange={closeNotifyDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <form onSubmit={handleNotifySubmit}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {notifySlot?.channel === 'portal' && <Bell className="h-4 w-4" />}
+                {notifySlot?.channel === 'email' && <Mail className="h-4 w-4" />}
+                {notifySlot?.channel === 'sms' && <MessageSquare className="h-4 w-4" />}
+                {notifySlot?.channel === 'portal' && t('Send Portal Notification')}
+                {notifySlot?.channel === 'email' && t('Send Email')}
+                {notifySlot?.channel === 'sms' && t('Send SMS')}
+              </DialogTitle>
+              {notifySlot && (
+                <DialogDescription>
+                  {notifySlot.appointment.name}
+                  {notifySlot.appointment.start_time && (
+                    <span> · {formatTime(notifySlot.appointment.start_time)}
+                      {notifySlot.appointment.end_time && ` – ${formatTime(notifySlot.appointment.end_time)}`}
+                    </span>
+                  )}
+                  <span className="block mt-0.5">
+                    {format(notifySlot.date, 'EEEE, d. MMMM yyyy', { locale: dateFnsLocale })}
+                  </span>
+                </DialogDescription>
+              )}
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Recipients */}
+              <div className="space-y-2">
+                <Label>{t('Recipients')}</Label>
+                {notifySlot && notifySlot.recipientIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 border rounded-md p-2 bg-muted/30 min-h-[40px]">
+                    {notifySlot.recipientIds.map(uid => {
+                      const u = users.find(u => u.id === uid);
+                      return u ? (
+                        <Badge key={uid} variant="secondary">{u.name}</Badge>
+                      ) : null;
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic border rounded-md p-2">
+                    {t('No reservations for this slot — no recipients.')}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {notifySlot?.recipientIds.length ?? 0} {t('recipients')}
+                </p>
+              </div>
+
+              {/* Subject — only for portal and email */}
+              {notifySlot?.channel !== 'sms' && (
+                <div className="space-y-2">
+                  <Label htmlFor="notify-subject">{t('Subject')}</Label>
+                  <Input
+                    id="notify-subject"
+                    value={notifyData.subject}
+                    onChange={e => setNotifyData('subject', e.target.value)}
+                    required
+                  />
+                  {notifyErrors.subject && <p className="text-xs text-red-500">{notifyErrors.subject}</p>}
+                </div>
+              )}
+
+              {/* Message */}
+              <div className="space-y-2">
+                <Label htmlFor="notify-message">{t('Message')}</Label>
+                <Textarea
+                  id="notify-message"
+                  value={notifyData.message}
+                  onChange={e => setNotifyData('message', e.target.value)}
+                  required
+                  rows={6}
+                />
+                {notifyErrors.message && <p className="text-xs text-red-500">{notifyErrors.message}</p>}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeNotifyDialog}>
+                {t('Cancel')}
+              </Button>
+              <Button
+                type="submit"
+                disabled={notifyProcessing || (notifySlot?.recipientIds.length === 0)}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {t('Send')}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </AuthenticatedLayout>

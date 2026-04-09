@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Horse;
 use App\Models\Reservation;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -56,17 +57,43 @@ class ReservationController extends Controller
             ->limit(20)
             ->get();
 
+        $isAdmin = $this->isAdmin();
+        $isTeacher = auth()->user()->hasRole('ucitelj');
+
+        // Appointment IDs where current user is assigned as teacher
+        $myTeacherAppointmentIds = $isTeacher
+            ? \DB::table('appointment_teacher')
+                ->where('user_id', auth()->id())
+                ->pluck('appointment_id')
+                ->toArray()
+            : [];
+
+        // Enabled notification channels
+        $enabledChannels = array_filter([
+            config('notifications.enable_portal', true) ? 'portal' : null,
+            config('notifications.enable_email', true)  ? 'email'  : null,
+            config('notifications.enable_sms', true)    ? 'sms'    : null,
+        ]);
+
         return Inertia::render('Club/Reservations/Index', [
-            'appointments'        => $appointments,
-            'reservations'        => $reservations,
-            'horses'              => $horses,
-            'users'               => $users,
-            'canReserveForOthers' => $canReserveForOthers,
-            'startDate'           => $startDate,
-            'endDate'             => $endDate,
-            'currentView'         => $view,
-            'authUserId'          => auth()->id(),
-            'myUpcoming'          => $myUpcoming,
+            'appointments'             => $appointments,
+            'reservations'             => $reservations,
+            'horses'                   => $horses,
+            'users'                    => $users,
+            'canReserveForOthers'      => $canReserveForOthers,
+            'startDate'                => $startDate,
+            'endDate'                  => $endDate,
+            'currentView'              => $view,
+            'authUserId'               => auth()->id(),
+            'myUpcoming'               => $myUpcoming,
+            'reservationLimits'        => [
+                'minDaysInAdvance' => $isAdmin ? 0 : Setting::get('reservation.min_days_in_advance', 0),
+                'maxDaysInAdvance' => $isAdmin ? null : Setting::get('reservation.max_days_in_advance', 14),
+                'isAdmin'          => $isAdmin,
+            ],
+            'canNotifySlots'           => $isAdmin || $isTeacher,
+            'myTeacherAppointmentIds'  => $myTeacherAppointmentIds,
+            'enabledChannels'          => array_values($enabledChannels),
         ]);
     }
 
@@ -91,6 +118,36 @@ class ReservationController extends Controller
 
         if (! $canReserveForOthers) {
             $validated['user_id'] = auth()->id();
+        }
+
+        // Check min/max days in advance for non-admin users
+        if (! $this->isAdmin()) {
+            $date    = Carbon::parse($validated['reservation_date'])->startOfDay();
+            $today   = Carbon::today();
+            $daysAhead = $today->diffInDays($date, false);
+
+            $minDays = (int) Setting::get('reservation.min_days_in_advance', 0);
+            $maxDays = (int) Setting::get('reservation.max_days_in_advance', 14);
+
+            if ($daysAhead < $minDays) {
+                $msg = $minDays === 0
+                    ? __('Reservations cannot be made for past dates.')
+                    : trans_choice(
+                        'You can only make a reservation at least :count day in advance.|You can only make a reservation at least :count days in advance.',
+                        $minDays,
+                        ['count' => $minDays]
+                    );
+                return back()->withErrors(['reservation_date' => $msg]);
+            }
+
+            if ($daysAhead > $maxDays) {
+                $msg = trans_choice(
+                    'You can only make a reservation up to :count day in advance.|You can only make a reservation up to :count days in advance.',
+                    $maxDays,
+                    ['count' => $maxDays]
+                );
+                return back()->withErrors(['reservation_date' => $msg]);
+            }
         }
 
         // Check appointment is valid and active
@@ -160,5 +217,11 @@ class ReservationController extends Controller
         $reservation->delete();
 
         return redirect()->back()->with('success', __('Reservation successfully cancelled.'));
+    }
+
+    private function isAdmin(): bool
+    {
+        $user = auth()->user();
+        return $user->hasRole('admin') || $user->hasRole('superadmin');
     }
 }
