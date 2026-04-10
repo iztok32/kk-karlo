@@ -4,7 +4,10 @@
       "mcp__laravel-boost__database-schema",
       "Bash(php artisan:*)",
       "Bash(/c/Users/Iztok/.config/herd/bin/php84/php artisan:*)",
-      "mcp__laravel-boost__browser-logs"
+      "mcp__laravel-boost__browser-logs",
+      "Bash(grep -n \"AuthenticatedLayout\" e:/web-project/kk-karlo/resources/js/Pages/**/*.tsx e:/web-project/kk-karlo/resources/js/Pages/*.tsx)",
+      "Read(//tmp/**)",
+      "Bash(node -e ':*)"
     ]
   }
 }

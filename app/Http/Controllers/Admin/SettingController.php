@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,8 +14,14 @@ class SettingController extends Controller
     {
         $settings = Setting::orderBy('group')->orderBy('key')->get();
 
+        $adminUsers = User::whereHas('roles', fn($q) => $q->whereIn('slug', ['admin', 'superadmin']))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Admin/Settings/Index', [
-            'settings' => $settings,
+            'settings'   => $settings,
+            'adminUsers' => $adminUsers,
         ]);
     }
 

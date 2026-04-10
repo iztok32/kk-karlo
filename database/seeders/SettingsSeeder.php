@@ -22,6 +22,18 @@ class SettingsSeeder extends Seeder
                 'type'  => 'integer',
                 'group' => 'reservations',
             ],
+            [
+                'key'   => 'reservation.cancellation_days',
+                'value' => '2',
+                'type'  => 'integer',
+                'group' => 'reservations',
+            ],
+            [
+                'key'   => 'general.default_admin_ids',
+                'value' => '[]',
+                'type'  => 'string',
+                'group' => 'general',
+            ],
         ];
 
         foreach ($settings as $setting) {

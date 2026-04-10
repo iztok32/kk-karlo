@@ -47,6 +47,19 @@ class HandleInertiaRequests extends Middleware
                         })
                         ->whereNull('read_at')
                         ->count(),
+                    'coupon_balances' => DB::table('coupons')
+                        ->join('coupon_types', 'coupons.coupon_type_id', '=', 'coupon_types.id')
+                        ->select(
+                            'coupon_types.id',
+                            'coupon_types.name',
+                            DB::raw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) as balance")
+                        )
+                        ->where('coupons.user_id', $user->id)
+                        ->whereNull('coupons.deleted_at')
+                        ->groupBy('coupon_types.id', 'coupon_types.name')
+                        ->get()
+                        ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'balance' => (int) $r->balance])
+                        ->toArray(),
                 ]) : null,
             ],
             'locale' => app()->getLocale(),

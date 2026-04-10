@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Club;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Coupon;
 use App\Models\Horse;
+use App\Models\Notification;
 use App\Models\Reservation;
 use App\Models\Setting;
 use App\Models\User;
@@ -28,7 +30,8 @@ class ReservationController extends Controller
             $endDate   = $now->copy()->endOfMonth()->format('Y-m-d');
         }
 
-        $appointments = Appointment::where('is_active', true)
+        $appointments = Appointment::with('teachers:id,name')
+            ->where('is_active', true)
             ->orderBy('start_time')
             ->orderBy('name')
             ->get();
@@ -87,10 +90,12 @@ class ReservationController extends Controller
             'authUserId'               => auth()->id(),
             'myUpcoming'               => $myUpcoming,
             'reservationLimits'        => [
-                'minDaysInAdvance' => $isAdmin ? 0 : Setting::get('reservation.min_days_in_advance', 0),
-                'maxDaysInAdvance' => $isAdmin ? null : Setting::get('reservation.max_days_in_advance', 14),
-                'isAdmin'          => $isAdmin,
+                'minDaysInAdvance'  => $isAdmin ? 0 : Setting::get('reservation.min_days_in_advance', 0),
+                'maxDaysInAdvance'  => $isAdmin ? null : Setting::get('reservation.max_days_in_advance', 14),
+                'cancellationDays'  => $isAdmin ? null : (int) Setting::get('reservation.cancellation_days', 2),
+                'isAdmin'           => $isAdmin,
             ],
+            'defaultAdmins'            => $this->getDefaultAdmins(),
             'canNotifySlots'           => $isAdmin || $isTeacher,
             'myTeacherAppointmentIds'  => $myTeacherAppointmentIds,
             'enabledChannels'          => array_values($enabledChannels),
@@ -190,7 +195,7 @@ class ReservationController extends Controller
             ->first();
 
         if ($balanceRecord) {
-            \App\Models\Coupon::create([
+            Coupon::create([
                 'user_id' => $validated['user_id'],
                 'coupon_type_id' => $balanceRecord->coupon_type_id,
                 'quantity' => 1,
@@ -211,17 +216,83 @@ class ReservationController extends Controller
             abort(403, __('Unauthorized.'));
         }
 
-        // Delete any related coupon usage records
-        \App\Models\Coupon::where('reservation_id', $reservation->id)->delete();
+        // Non-admins: check cancellation deadline
+        if (! $this->isAdmin()) {
+            $cancellationDays = (int) Setting::get('reservation.cancellation_days', 2);
+            $daysUntil = Carbon::today()->diffInDays(
+                Carbon::parse($reservation->reservation_date)->startOfDay(),
+                false
+            );
+
+            if ($daysUntil < $cancellationDays) {
+                return back()->withErrors(['cancellation_deadline' => __('The cancellation deadline has passed.')]);
+            }
+        }
+
+        // Refund coupon
+        Coupon::where('reservation_id', $reservation->id)->delete();
 
         $reservation->delete();
 
         return redirect()->back()->with('success', __('Reservation successfully cancelled.'));
     }
 
+    public function notifyLateCancellation(Reservation $reservation)
+    {
+        // Only own reservation (or admin)
+        if (! $this->isAdmin() && $reservation->user_id !== auth()->id()) {
+            abort(403, __('Unauthorized.'));
+        }
+
+        $reservation->loadMissing('appointment.teachers');
+        $appointment = $reservation->appointment;
+
+        $recipientIds = $appointment->teachers->pluck('id')->toArray();
+
+        // Fall back to default admins from settings
+        if (empty($recipientIds)) {
+            $raw = Setting::get('general.default_admin_ids', '[]');
+            $recipientIds = json_decode($raw, true) ?? [];
+        }
+
+        if (empty($recipientIds)) {
+            return back()->withErrors(['notification' => __('No recipients found. Please configure default administrators in settings.')]);
+        }
+
+        $user            = auth()->user();
+        $reservationDate = Carbon::parse($reservation->reservation_date)->format('d.m.Y');
+        $subject         = __('Late cancellation request');
+        $message         = __(':user is requesting late cancellation of the reservation on :date for appointment :appointment.', [
+            'user'        => $user->name,
+            'date'        => $reservationDate,
+            'appointment' => $appointment->name,
+        ]);
+
+        foreach ($recipientIds as $recipientId) {
+            Notification::create([
+                'sender_id'    => auth()->id(),
+                'recipient_id' => $recipientId,
+                'type'         => 'portal',
+                'subject'      => $subject,
+                'message'      => $message,
+                'status'       => 'sent',
+                'sent_at'      => now(),
+            ]);
+        }
+
+        return back()->with('success', __('Notification sent successfully.'));
+    }
+
     private function isAdmin(): bool
     {
         $user = auth()->user();
         return $user->hasRole('admin') || $user->hasRole('superadmin');
+    }
+
+    private function getDefaultAdmins(): array
+    {
+        $ids = json_decode(Setting::get('general.default_admin_ids', '[]'), true) ?? [];
+        if (empty($ids)) return [];
+        return User::whereIn('id', $ids)->get(['id', 'name'])->toArray();
     }
 }

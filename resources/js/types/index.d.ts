@@ -7,6 +7,12 @@ export interface UserConfig {
     [key: string]: any;
 }
 
+export interface CouponBalance {
+    id: number;
+    name: string;
+    balance: number;
+}
+
 export interface User {
     id: number;
     name: string;
@@ -34,6 +40,7 @@ export interface User {
     is_member: boolean;
     membership_paid: boolean;
     notify_free_slots: boolean;
+    coupon_balances?: CouponBalance[];
 }
 
 export interface HorsemanType {

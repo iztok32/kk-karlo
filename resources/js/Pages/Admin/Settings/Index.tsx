@@ -1,10 +1,21 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
+import { useMemo, useState } from 'react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import { Save } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/Components/ui/popover';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/Components/ui/command';
+import { Check, ChevronsUpDown, X, Save } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Setting {
     id: number;
@@ -14,17 +25,24 @@ interface Setting {
     group: string;
 }
 
-interface Props {
-    settings: Setting[];
+interface AdminUser {
+    id: number;
+    name: string;
 }
 
-const GROUP_LABELS: Record<string, string> = {
-    reservations: 'Rezervacije',
-    general: 'Splošno',
-};
+interface Props {
+    settings: Setting[];
+    adminUsers: AdminUser[];
+}
 
-export default function Index({ settings }: Props) {
+export default function Index({ settings, adminUsers }: Props) {
     const { t } = useTranslation();
+    const [adminSelectOpen, setAdminSelectOpen] = useState(false);
+
+    const groupLabels: Record<string, string> = {
+        reservations: t('Reservations'),
+        general: t('General'),
+    };
 
     const { data, setData, post, processing, errors } = useForm({
         settings: settings.map(s => ({ key: s.key, value: s.value ?? '' })),
@@ -39,12 +57,29 @@ export default function Index({ settings }: Props) {
         ));
     };
 
+    const selectedAdminIds = useMemo<number[]>(() => {
+        try {
+            return JSON.parse(getValue('general.default_admin_ids')) ?? [];
+        } catch {
+            return [];
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.settings]);
+
+    const toggleAdminId = (id: number) => {
+        const updated = selectedAdminIds.includes(id)
+            ? selectedAdminIds.filter(x => x !== id)
+            : [...selectedAdminIds, id];
+        setValue('general.default_admin_ids', JSON.stringify(updated));
+    };
+
+    const selectedAdminUsers = adminUsers.filter(u => selectedAdminIds.includes(u.id));
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('admin.settings.update'), { preserveScroll: true });
     };
 
-    // Group settings by group field
     const groups = settings.reduce<Record<string, Setting[]>>((acc, s) => {
         (acc[s.group] ??= []).push(s);
         return acc;
@@ -58,6 +93,14 @@ export default function Index({ settings }: Props) {
         'reservation.max_days_in_advance': {
             label: t('Max days in advance for reservation'),
             description: t('Maximum number of days in advance a non-admin user can make a reservation. Admins have no limit.'),
+        },
+        'reservation.cancellation_days': {
+            label: t('Cancellation deadline (days)'),
+            description: t('How many days before the appointment a user can cancel and receive a coupon refund. Admins can always cancel without restrictions.'),
+        },
+        'general.default_admin_ids': {
+            label: t('Default administrators'),
+            description: t('Administrators who receive notifications when a user requests a late cancellation and no teacher is assigned to the appointment.'),
         },
     };
 
@@ -79,7 +122,7 @@ export default function Index({ settings }: Props) {
                                 <div key={group} className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                                     <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
                                         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                                            {GROUP_LABELS[group] ?? group}
+                                            {groupLabels[group] ?? group}
                                         </h3>
                                     </div>
                                     <div className="p-6 space-y-6">
@@ -90,7 +133,74 @@ export default function Index({ settings }: Props) {
                                                     <Label htmlFor={setting.key}>
                                                         {meta?.label ?? setting.key}
                                                     </Label>
-                                                    {setting.type === 'integer' && (
+
+                                                    {setting.key === 'general.default_admin_ids' ? (
+                                                        <div className="flex flex-col gap-2">
+                                                            <Popover open={adminSelectOpen} onOpenChange={setAdminSelectOpen}>
+                                                                <PopoverTrigger asChild>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        role="combobox"
+                                                                        aria-expanded={adminSelectOpen}
+                                                                        className="w-80 justify-between font-normal"
+                                                                    >
+                                                                        <span className="truncate text-muted-foreground">
+                                                                            {selectedAdminUsers.length === 0
+                                                                                ? t('Select administrators...')
+                                                                                : t(':count selected', { count: selectedAdminUsers.length })}
+                                                                        </span>
+                                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-80 p-0" align="start">
+                                                                    <Command>
+                                                                        <CommandInput placeholder={t('Search...')} />
+                                                                        <CommandList>
+                                                                            <CommandEmpty>{t('No users found.')}</CommandEmpty>
+                                                                            <CommandGroup>
+                                                                                {adminUsers.map(u => (
+                                                                                    <CommandItem
+                                                                                        key={u.id}
+                                                                                        value={u.name}
+                                                                                        onSelect={() => toggleAdminId(u.id)}
+                                                                                    >
+                                                                                        <Check
+                                                                                            className={cn(
+                                                                                                'mr-2 h-4 w-4',
+                                                                                                selectedAdminIds.includes(u.id) ? 'opacity-100' : 'opacity-0'
+                                                                                            )}
+                                                                                        />
+                                                                                        {u.name}
+                                                                                    </CommandItem>
+                                                                                ))}
+                                                                            </CommandGroup>
+                                                                        </CommandList>
+                                                                    </Command>
+                                                                </PopoverContent>
+                                                            </Popover>
+
+                                                            {selectedAdminUsers.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    {selectedAdminUsers.map(u => (
+                                                                        <span
+                                                                            key={u.id}
+                                                                            className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                                                                        >
+                                                                            {u.name}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => toggleAdminId(u.id)}
+                                                                                className="hover:text-destructive transition-colors"
+                                                                            >
+                                                                                <X className="h-3 w-3" />
+                                                                            </button>
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : setting.type === 'integer' ? (
                                                         <Input
                                                             id={setting.key}
                                                             type="number"
@@ -99,8 +209,7 @@ export default function Index({ settings }: Props) {
                                                             onChange={e => setValue(setting.key, e.target.value)}
                                                             className="w-32"
                                                         />
-                                                    )}
-                                                    {setting.type === 'boolean' && (
+                                                    ) : setting.type === 'boolean' ? (
                                                         <select
                                                             id={setting.key}
                                                             value={getValue(setting.key)}
@@ -110,8 +219,7 @@ export default function Index({ settings }: Props) {
                                                             <option value="true">{t('Yes')}</option>
                                                             <option value="false">{t('No')}</option>
                                                         </select>
-                                                    )}
-                                                    {setting.type === 'string' && (
+                                                    ) : (
                                                         <Input
                                                             id={setting.key}
                                                             type="text"
@@ -120,6 +228,7 @@ export default function Index({ settings }: Props) {
                                                             className="w-80"
                                                         />
                                                     )}
+
                                                     {meta?.description && (
                                                         <p className="text-xs text-muted-foreground">{meta.description}</p>
                                                     )}
