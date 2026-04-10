@@ -17,6 +17,9 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
 fi
 
+echo "==> Running composer update..."
+composer update --no-dev --no-interaction --optimize-autoloader --prefer-dist
+
 echo "==> Running database migrations..."
 php artisan migrate --force
 

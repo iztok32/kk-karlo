@@ -41,8 +41,8 @@ RUN docker-php-ext-configure gd \
         pcntl \
         exif
 
-# Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Composer — installed directly to avoid pulling a separate image from Docker Hub
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 WORKDIR /var/www/html
 
