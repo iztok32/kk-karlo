@@ -14,7 +14,12 @@ class Coupon extends Model
         'quantity',
         'transaction_type',
         'reservation_id',
+        'stripe_payment_intent_id',
+        'price_paid',
+        'notes',
     ];
+
+    protected $casts = ['price_paid' => 'float'];
 
     public function user()
     {

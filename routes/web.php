@@ -42,6 +42,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('reservations', \App\Http\Controllers\Club\ReservationController::class)->only(['index', 'store', 'destroy']);
     Route::post('reservations/{reservation}/notify-late-cancellation', [\App\Http\Controllers\Club\ReservationController::class, 'notifyLateCancellation'])->name('reservations.notify-late-cancellation');
     Route::resource('coupons', \App\Http\Controllers\Club\CouponController::class)->only(['index', 'store', 'destroy']);
+    Route::get('purchase', [\App\Http\Controllers\Club\PurchaseController::class, 'index'])->name('purchase.index');
+    Route::post('purchase/intent', [\App\Http\Controllers\Club\PurchaseController::class, 'createIntent'])->name('purchase.intent');
+    Route::post('purchase/confirm', [\App\Http\Controllers\Club\PurchaseController::class, 'confirm'])->name('purchase.confirm');
     Route::resource('navigation', \App\Http\Controllers\Core\NavigationItemController::class)->except(['create', 'edit', 'show']);
     Route::post('navigation/reorder', [\App\Http\Controllers\Core\NavigationItemController::class, 'reorder'])->name('navigation.reorder');
     Route::post('navigation/config', [\App\Http\Controllers\Core\NavigationItemController::class, 'updateConfig'])->name('navigation.updateConfig');
@@ -130,5 +133,9 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Stripe webhook — outside auth middleware; CSRF excluded in bootstrap/app.php
+Route::post('/stripe/webhook', [\App\Http\Controllers\Club\PurchaseController::class, 'webhook'])
+    ->name('stripe.webhook');
 
 Route::post('/locale', \App\Http\Controllers\LocaleController::class)->name('locale.update');

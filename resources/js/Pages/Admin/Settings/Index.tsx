@@ -14,7 +14,7 @@ import {
     CommandItem,
     CommandList,
 } from '@/Components/ui/command';
-import { Check, ChevronsUpDown, X, Save } from 'lucide-react';
+import { Check, ChevronsUpDown, X, Save, Euro } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Setting {
@@ -30,12 +30,19 @@ interface AdminUser {
     name: string;
 }
 
+interface CouponType {
+    id: number;
+    name: string;
+    price: number;
+}
+
 interface Props {
     settings: Setting[];
     adminUsers: AdminUser[];
+    couponTypes: CouponType[];
 }
 
-export default function Index({ settings, adminUsers }: Props) {
+export default function Index({ settings, adminUsers, couponTypes }: Props) {
     const { t } = useTranslation();
     const [adminSelectOpen, setAdminSelectOpen] = useState(false);
 
@@ -44,8 +51,12 @@ export default function Index({ settings, adminUsers }: Props) {
         general: t('General'),
     };
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors } = useForm<{
+        settings: { key: string; value: string }[];
+        coupon_type_prices: Record<number, string>;
+    }>({
         settings: settings.map(s => ({ key: s.key, value: s.value ?? '' })),
+        coupon_type_prices: Object.fromEntries(couponTypes.map(ct => [ct.id, String(ct.price ?? 0)])),
     });
 
     const getValue = (key: string) =>
@@ -241,6 +252,42 @@ export default function Index({ settings, adminUsers }: Props) {
                                     </div>
                                 </div>
                             ))}
+
+                            {/* Coupon type prices */}
+                            {couponTypes.length > 0 && (
+                                <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                                    <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                                            {t('Coupon Prices')}
+                                        </h3>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {t('Price per coupon unit for online purchase (EUR).')}
+                                        </p>
+                                    </div>
+                                    <div className="p-6 space-y-4">
+                                        {couponTypes.map(ct => (
+                                            <div key={ct.id} className="grid gap-2">
+                                                <Label htmlFor={`coupon_price_${ct.id}`}>{ct.name}</Label>
+                                                <div className="relative w-36">
+                                                    <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                                    <Input
+                                                        id={`coupon_price_${ct.id}`}
+                                                        type="number"
+                                                        min={0}
+                                                        step={0.01}
+                                                        value={data.coupon_type_prices[ct.id] ?? '0'}
+                                                        onChange={e => setData('coupon_type_prices', {
+                                                            ...data.coupon_type_prices,
+                                                            [ct.id]: e.target.value,
+                                                        })}
+                                                        className="pl-8"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex justify-end">
                                 <Button type="submit" disabled={processing}>
