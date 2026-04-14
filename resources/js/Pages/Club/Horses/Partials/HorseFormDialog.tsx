@@ -12,6 +12,7 @@ import { Label } from '@/Components/ui/label';
 import { Switch } from '@/Components/ui/switch';
 import { useForm } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { Horse, HorseFormData } from '../types';
 import { useEffect } from 'react';
 
@@ -93,7 +94,7 @@ export default function HorseFormDialog({ isOpen, onClose, editingHorse }: Props
                                 type="number"
                                 value={data.year || ''}
                                 onChange={(e) => setData('year', e.target.value ? parseInt(e.target.value) : 0)}
-                                className={errors.year ? 'border-red-500' : ''}
+                                className={cn('w-28', errors.year ? 'border-red-500' : '')}
                             />
                             {errors.year && <p className="text-sm text-red-500">{errors.year}</p>}
                         </div>

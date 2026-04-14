@@ -13,7 +13,7 @@ class CouponController extends Controller
 {
     public function index(Request $request)
     {
-        $canManageCoupons = auth()->user()->hasPermission('reservations.reserve-for-others') || auth()->user()->hasPermission('coupons.manage');
+        $canManageCoupons = auth()->user()->hasPermission('reservations.reserve-for-others');
 
         $query = Coupon::with(['user:id,name', 'couponType:id,name', 'reservation.appointment', 'reservation.horse'])
             ->orderBy('created_at', 'desc');
@@ -40,7 +40,7 @@ class CouponController extends Controller
 
     public function store(Request $request)
     {
-        $canManageCoupons = auth()->user()->hasPermission('reservations.reserve-for-others') || auth()->user()->hasPermission('coupons.manage');
+        $canManageCoupons = auth()->user()->hasPermission('reservations.reserve-for-others');
 
         $rules = [
             'coupon_type_id'   => 'required|exists:coupon_types,id',
@@ -66,7 +66,7 @@ class CouponController extends Controller
 
     public function destroy(Coupon $coupon)
     {
-        $canManageCoupons = auth()->user()->hasPermission('reservations.reserve-for-others') || auth()->user()->hasPermission('coupons.manage');
+        $canManageCoupons = auth()->user()->hasPermission('reservations.reserve-for-others');
 
         if (! $canManageCoupons && $coupon->user_id !== auth()->id()) {
             abort(403, __('Unauthorized.'));

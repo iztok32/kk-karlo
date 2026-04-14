@@ -50,10 +50,15 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $user = auth()->user();
+
         return Inertia::render('Club/Appointment/Index', [
             'appointments' => $appointments,
             'horses'       => $horses,
             'teachers'     => $teachers,
+            'canCreate'    => $user->hasPermission('appointments.create'),
+            'canEdit'      => $user->hasPermission('appointments.edit'),
+            'canDelete'    => $user->hasPermission('appointments.delete'),
         ]);
     }
 

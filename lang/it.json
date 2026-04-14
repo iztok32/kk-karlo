@@ -789,5 +789,19 @@
     "coupon": "coupon",
     "Select coupons above": "Seleziona coupon sopra",
     "Coupon type": "Tipo coupon",
-    "Amount": "Importo"
+    "Amount": "Importo",
+    "Overview of your coupon balance and transaction history.": "Panoramica del saldo coupon e della cronologia delle transazioni.",
+    "Total Balance": "Saldo totale",
+    "coupons available": "coupon disponibili",
+    "available": "disponibile",
+    "Total Purchases": "Totale acquisti",
+    "purchases made": "acquisti effettuati",
+    "No coupon transactions yet.": "Nessuna transazione con coupon ancora.",
+    "Choose files": "Scegli file",
+    "No file chosen": "Nessun file selezionato",
+    "Member": "Membro",
+    "Paid": "Pagato",
+    "Unpaid": "Non pagato",
+    "Coupons": "Coupon",
+    "Show active/inactive users": "Mostra utenti attivi/inattivi"
 }

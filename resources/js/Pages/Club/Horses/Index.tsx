@@ -17,9 +17,12 @@ import DeleteConfirmDialog from './Partials/DeleteConfirmDialog';
 
 interface Props {
     horses: Horse[];
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
 }
 
-export default function Index({ horses: initialHorses }: Props) {
+export default function Index({ horses: initialHorses, canCreate, canEdit, canDelete }: Props) {
     const { t } = useTranslation();
     const [localHorses, setLocalHorses] = useState(initialHorses);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -30,7 +33,7 @@ export default function Index({ horses: initialHorses }: Props) {
     const [horseToDelete, setHorseToDelete] = useState<Horse | null>(null);
     const [showActive, setShowActive] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+    const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
     const filteredHorses = localHorses.filter(h => {
         const matchesStatus = h.is_active === showActive;

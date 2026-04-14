@@ -5,7 +5,19 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
-import { Plus, Edit2, Trash2, Mail, Check, X, Search, LayoutGrid, LayoutList } from 'lucide-react';
+import { Switch } from '@/Components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/Components/ui/dropdown-menu';
+import {
+    Plus, Edit2, Trash2, Mail, Check, X, Search, LayoutGrid, LayoutList,
+    MoreHorizontal, Ticket, UserCheck, UserX,
+} from 'lucide-react';
 import { PageProps } from '@/types';
 import {
     Table,
@@ -31,6 +43,7 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import { Badge } from '@/Components/ui/badge';
+import { cn } from '@/lib/utils';
 import UserForm from './Partials/UserForm';
 
 interface User {
@@ -38,6 +51,9 @@ interface User {
     name: string;
     email: string;
     is_active: boolean;
+    is_member: boolean;
+    membership_paid: boolean;
+    coupon_balance: number;
     roles: string[];
     created_at: string;
     deleted_at: string | null;
@@ -65,7 +81,6 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
     const { auth } = usePage<PageProps>().props;
     const userPermissions = auth.user?.permissions || [];
 
-    // Check permissions
     const canCreate = userPermissions.includes('users.create');
     const canEdit = userPermissions.includes('users.edit');
     const canDelete = userPermissions.includes('users.delete');
@@ -75,6 +90,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showActive, setShowActive] = useState(true);
     const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
     const handleCreate = () => {
@@ -109,13 +125,11 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
     };
 
     const handleSendPasswordReset = (userId: number) => {
-        router.post(route('users.send-password-reset'), {
-            user_id: userId,
-        });
+        router.post(route('users.send-password-reset'), { user_id: userId });
     };
 
-    // Filter users based on search query
     const filteredUsers = users.filter(user => {
+        if (user.is_active !== showActive) return false;
         const query = searchQuery.toLowerCase();
         return (
             user.name.toLowerCase().includes(query) ||
@@ -123,6 +137,100 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
             user.roles.some(role => role.toLowerCase().includes(query))
         );
     });
+
+    const StatusIcon = ({ user }: { user: User }) => {
+        if (user.deleted_at) {
+            return (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </TooltipTrigger>
+                    <TooltipContent>{t('Deleted')}</TooltipContent>
+                </Tooltip>
+            );
+        }
+        return user.is_active ? (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Check className="h-4 w-4 text-green-600" />
+                </TooltipTrigger>
+                <TooltipContent>{t('Active')}</TooltipContent>
+            </Tooltip>
+        ) : (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <X className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>{t('Inactive')}</TooltipContent>
+            </Tooltip>
+        );
+    };
+
+    const MemberIcon = ({ user }: { user: User }) => {
+        if (!user.is_member) return null;
+        return user.membership_paid ? (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <UserCheck className="h-4 w-4 text-green-600" />
+                </TooltipTrigger>
+                <TooltipContent>{t('Member')} – {t('Paid')}</TooltipContent>
+            </Tooltip>
+        ) : (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <UserX className="h-4 w-4 text-orange-500" />
+                </TooltipTrigger>
+                <TooltipContent>{t('Member')} – {t('Unpaid')}</TooltipContent>
+            </Tooltip>
+        );
+    };
+
+    const CouponBadge = ({ balance }: { balance: number }) => (
+        <span className={cn(
+            'inline-flex items-center gap-1 text-sm font-medium',
+            balance > 0 ? 'text-foreground' : 'text-muted-foreground'
+        )}>
+            <Ticket className="h-3.5 w-3.5 shrink-0" />
+            {balance}
+        </span>
+    );
+
+    const UserActions = ({ user }: { user: User }) => {
+        if (!canEdit && !canDelete) return null;
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    {canEdit && (
+                        <>
+                            <DropdownMenuItem onClick={() => handleEdit(user)}>
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                {t('Edit User')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendPasswordReset(user.id)}>
+                                <Mail className="mr-2 h-4 w-4" />
+                                {t('Send Password Reset Link')}
+                            </DropdownMenuItem>
+                        </>
+                    )}
+                    {canEdit && canDelete && <DropdownMenuSeparator />}
+                    {canDelete && (
+                        <DropdownMenuItem
+                            onClick={() => handleDelete(user.id)}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('Delete User')}
+                        </DropdownMenuItem>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
+    };
 
     return (
         <AuthenticatedLayout
@@ -148,24 +256,53 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                     className="pl-8 w-64"
                                 />
                             </div>
-                            <Button
-                                variant={viewMode === 'table' ? 'secondary' : 'outline'}
-                                size="sm"
-                                className="h-9 w-9 p-0"
-                                onClick={() => setViewMode('table')}
-                                title={t('Table view')}
-                            >
-                                <LayoutList className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant={viewMode === 'card' ? 'secondary' : 'outline'}
-                                size="sm"
-                                className="h-9 w-9 p-0"
-                                onClick={() => setViewMode('card')}
-                                title={t('Card view')}
-                            >
-                                <LayoutGrid className="h-4 w-4" />
-                            </Button>
+
+                            {/* Active/Inactive Toggle */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="relative inline-flex items-center">
+                                        <Switch
+                                            checked={showActive}
+                                            onCheckedChange={setShowActive}
+                                            className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                                        />
+                                        <X className={cn(
+                                            'pointer-events-none absolute left-1 h-3 w-3 text-white transition-opacity duration-200',
+                                            showActive ? 'opacity-0' : 'opacity-100'
+                                        )} />
+                                        <Check className={cn(
+                                            'pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200',
+                                            showActive ? 'opacity-100' : 'opacity-0'
+                                        )} />
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {t('Show active/inactive users')}
+                                </TooltipContent>
+                            </Tooltip>
+
+                            {/* View Mode Toggle */}
+                            <div className="flex items-center border rounded-md">
+                                <Button
+                                    variant={viewMode === 'table' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    className="h-9 w-9 p-0 rounded-r-none"
+                                    onClick={() => setViewMode('table')}
+                                    title={t('Table view')}
+                                >
+                                    <LayoutList className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'card' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    className="h-9 w-9 p-0 rounded-l-none"
+                                    onClick={() => setViewMode('card')}
+                                    title={t('Card view')}
+                                >
+                                    <LayoutGrid className="h-4 w-4" />
+                                </Button>
+                            </div>
+
                             {canCreate && (
                                 <Button onClick={handleCreate} size="sm" className="gap-2">
                                     <Plus className="h-4 w-4" />
@@ -181,9 +318,11 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                     <TableRow>
                                         <TableHead>{t('Name')}</TableHead>
                                         <TableHead>{t('Email')}</TableHead>
-                                        <TableHead>{t('Status')}</TableHead>
+                                        <TableHead className="text-center">{t('Status')}</TableHead>
+                                        <TableHead className="text-center">{t('Member')}</TableHead>
+                                        <TableHead className="text-center">{t('Coupons')}</TableHead>
                                         <TableHead>{t('Roles')}</TableHead>
-                                        <TableHead className="text-right">{t('Actions')}</TableHead>
+                                        <TableHead className="w-12"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -192,22 +331,14 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                             <TableRow key={user.id} className={user.deleted_at ? 'opacity-50' : ''}>
                                                 <TableCell className="font-medium">{user.name}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        {user.deleted_at ? (
-                                                            <Badge variant="destructive">{t('Deleted')}</Badge>
-                                                        ) : user.is_active ? (
-                                                            <Badge variant="default" className="gap-1">
-                                                                <Check className="h-3 w-3" />
-                                                                {t('Active')}
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="gap-1">
-                                                                <X className="h-3 w-3" />
-                                                                {t('Inactive')}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
+                                                <TableCell className="text-center">
+                                                    <StatusIcon user={user} />
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <MemberIcon user={user} />
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <CouponBadge balance={user.coupon_balance} />
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-wrap gap-1">
@@ -219,50 +350,13 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        {canEdit && (
-                                                            <>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleSendPasswordReset(user.id)}
-                                                                    title={t('Send Password Reset Link')}
-                                                                >
-                                                                    <Mail className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleEdit(user)}
-                                                                    title={t('Edit User')}
-                                                                >
-                                                                    <Edit2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                        {canDelete && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleDelete(user.id)}
-                                                                className="text-destructive hover:text-destructive"
-                                                                title={t('Delete User')}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                        {!canEdit && !canDelete && (
-                                                            <span className="text-muted-foreground text-sm">
-                                                                {t('No actions available')}
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <UserActions user={user} />
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                                 {t('No users found.')}
                                             </TableCell>
                                         </TableRow>
@@ -275,7 +369,10 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                     {filteredUsers.map((user) => (
                                         <div
                                             key={user.id}
-                                            className={`border rounded-lg p-4 flex flex-col gap-3 ${user.deleted_at ? 'opacity-50' : ''}`}
+                                            className={cn(
+                                                'border rounded-lg p-4 flex flex-col gap-3',
+                                                user.deleted_at && 'opacity-50'
+                                            )}
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex items-center gap-3 min-w-0">
@@ -287,20 +384,17 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                                         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                                     </div>
                                                 </div>
-                                                {user.deleted_at ? (
-                                                    <Badge variant="destructive" className="shrink-0">{t('Deleted')}</Badge>
-                                                ) : user.is_active ? (
-                                                    <Badge variant="default" className="gap-1 shrink-0">
-                                                        <Check className="h-3 w-3" />
-                                                        {t('Active')}
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="secondary" className="gap-1 shrink-0">
-                                                        <X className="h-3 w-3" />
-                                                        {t('Inactive')}
-                                                    </Badge>
-                                                )}
+                                                <div className="shrink-0">
+                                                    <StatusIcon user={user} />
+                                                </div>
                                             </div>
+
+                                            {/* Member + Coupons row */}
+                                            <div className="flex items-center gap-3">
+                                                <MemberIcon user={user} />
+                                                <CouponBadge balance={user.coupon_balance} />
+                                            </div>
+
                                             {user.roles.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                     {user.roles.map((role, index) => (
@@ -310,38 +404,9 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                                     ))}
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-1 mt-auto pt-1 border-t">
-                                                {canEdit && (
-                                                    <>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleSendPasswordReset(user.id)}
-                                                            title={t('Send Password Reset Link')}
-                                                        >
-                                                            <Mail className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleEdit(user)}
-                                                            title={t('Edit User')}
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {canDelete && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleDelete(user.id)}
-                                                        className="text-destructive hover:text-destructive"
-                                                        title={t('Delete User')}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
+
+                                            <div className="flex items-center justify-end mt-auto pt-1 border-t">
+                                                <UserActions user={user} />
                                             </div>
                                         </div>
                                     ))}

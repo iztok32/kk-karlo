@@ -95,32 +95,47 @@ export default function HorseImageManager({ isOpen, onClose, horse }: Props) {
 
                 <div className="space-y-4">
                     {/* Upload Section */}
-                    <div className="border-2 border-dashed rounded-lg p-4">
-                        <Label htmlFor="images">{t('Upload Images')}</Label>
-                        <Input
+                    <div className="border-2 border-dashed rounded-lg p-4 space-y-3">
+                        <Label>{t('Upload Images')}</Label>
+
+                        {/* Hidden native file input */}
+                        <input
                             ref={fileInputRef}
                             id="images"
                             type="file"
                             multiple
                             accept="image/*"
                             onChange={handleFileSelect}
-                            className="mt-2"
+                            className="sr-only"
                         />
+
+                        {/* Custom trigger row */}
+                        <div className="flex items-center gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <Upload className="mr-2 h-4 w-4" />
+                                {t('Choose files')}
+                            </Button>
+                            <span className="text-sm text-muted-foreground">
+                                {selectedFiles && selectedFiles.length > 0
+                                    ? `${selectedFiles.length} ${selectedFiles.length === 1 ? t('file') : t('files')} ${t('selected')}`
+                                    : t('No file chosen')}
+                            </span>
+                        </div>
+
                         {selectedFiles && selectedFiles.length > 0 && (
-                            <div className="mt-2">
-                                <p className="text-sm text-muted-foreground">
-                                    {selectedFiles.length} {selectedFiles.length === 1 ? t('file') : t('files')} {t('selected')}
-                                </p>
-                                <Button
-                                    onClick={handleUploadImages}
-                                    disabled={uploading}
-                                    className="mt-2"
-                                    size="sm"
-                                >
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    {uploading ? t('Uploading...') : t('Upload')}
-                                </Button>
-                            </div>
+                            <Button
+                                onClick={handleUploadImages}
+                                disabled={uploading}
+                                size="sm"
+                            >
+                                <Upload className="mr-2 h-4 w-4" />
+                                {uploading ? t('Uploading...') : t('Upload')}
+                            </Button>
                         )}
                     </div>
 

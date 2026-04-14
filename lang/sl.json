@@ -789,5 +789,19 @@
     "coupon": "kupon",
     "Select coupons above": "Zgoraj izberite kupone",
     "Coupon type": "Vrsta kupona",
-    "Amount": "Znesek"
+    "Amount": "Znesek",
+    "Overview of your coupon balance and transaction history.": "Pregled stanja kuponov in zgodovine transakcij.",
+    "Total Balance": "Skupno stanje",
+    "coupons available": "kuponov na voljo",
+    "available": "na voljo",
+    "Total Purchases": "Skupaj nakupov",
+    "purchases made": "opravljenih nakupov",
+    "No coupon transactions yet.": "Še ni transakcij s kuponi.",
+    "Choose files": "Izberi datoteke",
+    "No file chosen": "Nobena datoteka ni izbrana",
+    "Member": "Član",
+    "Paid": "Plačano",
+    "Unpaid": "Neplačano",
+    "Coupons": "Kuponi",
+    "Show active/inactive users": "Prikaži aktivne/neaktivne uporabnike"
 }

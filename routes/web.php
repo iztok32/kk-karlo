@@ -24,21 +24,78 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::post('horses/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorder'])->name('horses.reorder');
-    Route::post('horses/{horse}/images', [\App\Http\Controllers\Club\HorseController::class, 'uploadImages'])->name('horses.images.upload');
-    Route::delete('horse-images/{image}', [\App\Http\Controllers\Club\HorseController::class, 'deleteImage'])->name('horses.images.delete');
-    Route::post('horses/{horse}/images/{image}/primary', [\App\Http\Controllers\Club\HorseController::class, 'setPrimaryImage'])->name('horses.images.primary');
-    Route::post('horses/{horse}/images/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorderImages'])->name('horses.images.reorder');
-    Route::resource('horses', \App\Http\Controllers\Club\HorseController::class);
-    Route::post('news/{news}/images', [\App\Http\Controllers\Club\NewsController::class, 'uploadImages'])->name('news.images.upload');
-    Route::delete('news-images/{image}', [\App\Http\Controllers\Club\NewsController::class, 'deleteImage'])->name('news.images.delete');
-    Route::post('news/{news}/images/reorder', [\App\Http\Controllers\Club\NewsController::class, 'reorderImages'])->name('news.images.reorder');
-    Route::post('news/{news}/images/{image}/primary', [\App\Http\Controllers\Club\NewsController::class, 'setPrimaryImage'])->name('news.images.primary');
-    Route::resource('news', \App\Http\Controllers\Club\NewsController::class);
-    Route::post('horseman/reorder', [\App\Http\Controllers\Club\HorsemanController::class, 'reorder'])->name('horseman.reorder');
-    Route::resource('horseman', \App\Http\Controllers\Club\HorsemanController::class);
-    Route::post('appointment/reorder', [\App\Http\Controllers\Club\AppointmentController::class, 'reorder'])->name('appointment.reorder');
-    Route::resource('appointment', \App\Http\Controllers\Club\AppointmentController::class);
+    // Horses routes with permission middleware
+    Route::middleware('permission:horses.view')->group(function () {
+        Route::get('horses', [\App\Http\Controllers\Club\HorseController::class, 'index'])->name('horses.index');
+    });
+    Route::middleware('permission:horses.create')->group(function () {
+        Route::post('horses', [\App\Http\Controllers\Club\HorseController::class, 'store'])->name('horses.store');
+        Route::post('horses/{horse}/images', [\App\Http\Controllers\Club\HorseController::class, 'uploadImages'])->name('horses.images.upload');
+    });
+    Route::middleware('permission:horses.edit')->group(function () {
+        Route::put('horses/{horse}', [\App\Http\Controllers\Club\HorseController::class, 'update'])->name('horses.update');
+        Route::patch('horses/{horse}', [\App\Http\Controllers\Club\HorseController::class, 'update']);
+        Route::post('horses/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorder'])->name('horses.reorder');
+        Route::delete('horse-images/{image}', [\App\Http\Controllers\Club\HorseController::class, 'deleteImage'])->name('horses.images.delete');
+        Route::post('horses/{horse}/images/{image}/primary', [\App\Http\Controllers\Club\HorseController::class, 'setPrimaryImage'])->name('horses.images.primary');
+        Route::post('horses/{horse}/images/reorder', [\App\Http\Controllers\Club\HorseController::class, 'reorderImages'])->name('horses.images.reorder');
+    });
+    Route::middleware('permission:horses.delete')->group(function () {
+        Route::delete('horses/{horse}', [\App\Http\Controllers\Club\HorseController::class, 'destroy'])->name('horses.destroy');
+    });
+
+    // News routes with permission middleware
+    Route::middleware('permission:news.view')->group(function () {
+        Route::get('news', [\App\Http\Controllers\Club\NewsController::class, 'index'])->name('news.index');
+    });
+    Route::middleware('permission:news.create')->group(function () {
+        Route::get('news/create', [\App\Http\Controllers\Club\NewsController::class, 'create'])->name('news.create');
+        Route::post('news', [\App\Http\Controllers\Club\NewsController::class, 'store'])->name('news.store');
+    });
+    Route::middleware('permission:news.edit')->group(function () {
+        Route::get('news/{news}/edit', [\App\Http\Controllers\Club\NewsController::class, 'edit'])->name('news.edit');
+        Route::put('news/{news}', [\App\Http\Controllers\Club\NewsController::class, 'update'])->name('news.update');
+        Route::patch('news/{news}', [\App\Http\Controllers\Club\NewsController::class, 'update']);
+        Route::post('news/{news}/images', [\App\Http\Controllers\Club\NewsController::class, 'uploadImages'])->name('news.images.upload');
+        Route::delete('news-images/{image}', [\App\Http\Controllers\Club\NewsController::class, 'deleteImage'])->name('news.images.delete');
+        Route::post('news/{news}/images/reorder', [\App\Http\Controllers\Club\NewsController::class, 'reorderImages'])->name('news.images.reorder');
+        Route::post('news/{news}/images/{image}/primary', [\App\Http\Controllers\Club\NewsController::class, 'setPrimaryImage'])->name('news.images.primary');
+    });
+    Route::middleware('permission:news.delete')->group(function () {
+        Route::delete('news/{news}', [\App\Http\Controllers\Club\NewsController::class, 'destroy'])->name('news.destroy');
+    });
+
+    // Horseman routes with permission middleware
+    Route::middleware('permission:horseman.view')->group(function () {
+        Route::get('horseman', [\App\Http\Controllers\Club\HorsemanController::class, 'index'])->name('horseman.index');
+    });
+    Route::middleware('permission:horseman.create')->group(function () {
+        Route::post('horseman', [\App\Http\Controllers\Club\HorsemanController::class, 'store'])->name('horseman.store');
+    });
+    Route::middleware('permission:horseman.edit')->group(function () {
+        Route::put('horseman/{horseman}', [\App\Http\Controllers\Club\HorsemanController::class, 'update'])->name('horseman.update');
+        Route::patch('horseman/{horseman}', [\App\Http\Controllers\Club\HorsemanController::class, 'update']);
+        Route::post('horseman/reorder', [\App\Http\Controllers\Club\HorsemanController::class, 'reorder'])->name('horseman.reorder');
+    });
+    Route::middleware('permission:horseman.delete')->group(function () {
+        Route::delete('horseman/{horseman}', [\App\Http\Controllers\Club\HorsemanController::class, 'destroy'])->name('horseman.destroy');
+    });
+
+    // Appointment routes with permission middleware
+    Route::middleware('permission:appointments.view')->group(function () {
+        Route::get('appointment', [\App\Http\Controllers\Club\AppointmentController::class, 'index'])->name('appointment.index');
+    });
+    Route::middleware('permission:appointments.create')->group(function () {
+        Route::post('appointment', [\App\Http\Controllers\Club\AppointmentController::class, 'store'])->name('appointment.store');
+    });
+    Route::middleware('permission:appointments.edit')->group(function () {
+        Route::put('appointment/{appointment}', [\App\Http\Controllers\Club\AppointmentController::class, 'update'])->name('appointment.update');
+        Route::patch('appointment/{appointment}', [\App\Http\Controllers\Club\AppointmentController::class, 'update']);
+        Route::post('appointment/reorder', [\App\Http\Controllers\Club\AppointmentController::class, 'reorder'])->name('appointment.reorder');
+    });
+    Route::middleware('permission:appointments.delete')->group(function () {
+        Route::delete('appointment/{appointment}', [\App\Http\Controllers\Club\AppointmentController::class, 'destroy'])->name('appointment.destroy');
+    });
     Route::resource('reservations', \App\Http\Controllers\Club\ReservationController::class)->only(['index', 'store', 'destroy']);
     Route::post('reservations/{reservation}/notify-late-cancellation', [\App\Http\Controllers\Club\ReservationController::class, 'notifyLateCancellation'])->name('reservations.notify-late-cancellation');
     Route::resource('coupons', \App\Http\Controllers\Club\CouponController::class)->only(['index', 'store', 'destroy']);

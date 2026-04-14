@@ -21,17 +21,46 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        // Coupon history and balances for the current user
+        $coupons = \App\Models\Coupon::with(['couponType:id,name', 'reservation.appointment:id,name'])
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $couponTypes = \App\Models\CouponType::orderBy('name')->get(['id', 'name']);
+
+        $couponBalances = $couponTypes->map(function ($type) use ($coupons) {
+            $balance = $coupons->where('coupon_type_id', $type->id)->sum(function ($c) {
+                return $c->transaction_type === 'purchase' ? $c->quantity : -$c->quantity;
+            });
+            return ['id' => $type->id, 'name' => $type->name, 'balance' => (int) $balance];
+        })->values();
+
+        $couponHistory = $coupons->map(function ($c) {
+            return [
+                'id'               => $c->id,
+                'coupon_type'      => $c->couponType?->name,
+                'quantity'         => $c->transaction_type === 'purchase' ? $c->quantity : -$c->quantity,
+                'transaction_type' => $c->transaction_type,
+                'price_paid'       => $c->price_paid,
+                'appointment'      => $c->reservation?->appointment?->name,
+                'created_at'       => $c->created_at,
+            ];
+        })->values();
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
-            'status' => session('status'),
-            'permissions' => [
-                'canView' => $user->hasPermission('profile.view'),
-                'canEdit' => $user->hasPermission('profile.edit'),
+            'status'          => session('status'),
+            'permissions'     => [
+                'canView'   => $user->hasPermission('profile.view'),
+                'canEdit'   => $user->hasPermission('profile.edit'),
                 'canDelete' => $user->hasPermission('profile.delete'),
             ],
-            'horsemanTypes' => \App\Models\HorsemanType::where('is_active', true)
+            'horsemanTypes'   => \App\Models\HorsemanType::where('is_active', true)
                 ->orderBy('display_order')
                 ->get(['id', 'name']),
+            'couponBalances'  => $couponBalances,
+            'couponHistory'   => $couponHistory,
         ]);
     }
 

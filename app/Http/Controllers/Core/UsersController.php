@@ -31,18 +31,26 @@ class UsersController extends Controller
         }
         $visibleRoles = $visibleRoles->unique('id');
 
+        // Coupon balances per user
+        $couponBalances = \App\Models\Coupon::selectRaw(
+            "user_id, SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) as balance"
+        )->groupBy('user_id')->pluck('balance', 'user_id');
+
         // Filter users based on role visibility
         $users = User::with('roles')
             ->visibleToUser($currentUser)
             ->orderBy('name')
             ->get()
-            ->map(function ($user) {
+            ->map(function ($user) use ($couponBalances) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'gsm_number' => $user->gsm_number,
                     'is_active' => $user->is_active,
+                    'is_member' => (bool) $user->is_member,
+                    'membership_paid' => (bool) $user->membership_paid,
+                    'coupon_balance' => (int) ($couponBalances[$user->id] ?? 0),
                     'roles' => $user->roles->pluck('name'),
                     'created_at' => $user->created_at,
                     'deleted_at' => $user->deleted_at,

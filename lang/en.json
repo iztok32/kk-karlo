@@ -789,5 +789,19 @@
     "coupon": "coupon",
     "Select coupons above": "Select coupons above",
     "Coupon type": "Coupon type",
-    "Amount": "Amount"
+    "Amount": "Amount",
+    "Overview of your coupon balance and transaction history.": "Overview of your coupon balance and transaction history.",
+    "Total Balance": "Total Balance",
+    "coupons available": "coupons available",
+    "available": "available",
+    "Total Purchases": "Total Purchases",
+    "purchases made": "purchases made",
+    "No coupon transactions yet.": "No coupon transactions yet.",
+    "Choose files": "Choose files",
+    "No file chosen": "No file chosen",
+    "Member": "Member",
+    "Paid": "Paid",
+    "Unpaid": "Unpaid",
+    "Coupons": "Coupons",
+    "Show active/inactive users": "Show active/inactive users"
 }

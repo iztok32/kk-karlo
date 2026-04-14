@@ -12,8 +12,13 @@ class HorsemanController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+
         return Inertia::render('Club/Horseman/Index', [
-            'horsemanTypes' => HorsemanType::orderBy('display_order')->orderBy('name')->get()
+            'horsemanTypes' => HorsemanType::orderBy('display_order')->orderBy('name')->get(),
+            'canCreate'     => $user->hasPermission('horseman.create'),
+            'canEdit'       => $user->hasPermission('horseman.edit'),
+            'canDelete'     => $user->hasPermission('horseman.delete'),
         ]);
     }
 

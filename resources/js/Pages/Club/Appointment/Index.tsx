@@ -558,37 +558,48 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
+        <DialogContent className="sm:max-w-[660px] max-h-[90vh] flex flex-col">
+          <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+            <DialogHeader className="shrink-0">
               <DialogTitle>{editingItem ? t('Edit Appointment') : t('Add Appointment')}</DialogTitle>
               <DialogDescription>
                 {t('Enter appointment details below. Click save when finished.')}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">{t('Name')}</Label>
-                <Input
-                  id="name"
-                  value={data.name}
-                  onChange={(e) => setData('name', e.target.value)}
-                  className={errors.name ? 'border-red-500' : ''}
-                />
-                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+
+            <div className="grid gap-3 py-3 overflow-y-auto flex-1 pr-1">
+
+              {/* Row 1: Name + Active */}
+              <div className="flex items-end gap-4">
+                <div className="flex-1 grid gap-1.5">
+                  <Label htmlFor="name">{t('Name')}</Label>
+                  <Input
+                    id="name"
+                    value={data.name}
+                    onChange={(e) => setData('name', e.target.value)}
+                    className={errors.name ? 'border-red-500' : ''}
+                  />
+                  {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                </div>
+                <div className="flex items-center gap-2 mb-2 shrink-0">
+                  <Switch
+                    id="is_active"
+                    checked={data.is_active}
+                    onCheckedChange={(checked) => setData('is_active', checked)}
+                  />
+                  <Label htmlFor="is_active">{t('Active')}</Label>
+                </div>
               </div>
 
+              {/* Row 2: Valid From + Valid To */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label>{t('Valid From')}</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !data.valid_from && "text-muted-foreground"
-                        )}
+                        variant="outline"
+                        className={cn("w-48 justify-start text-left font-normal", !data.valid_from && "text-muted-foreground")}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {data.valid_from ? format(new Date(data.valid_from), "PPP", { locale: currentLocale }) : <span>{t('Pick a date')}</span>}
@@ -605,16 +616,13 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label>{t('Valid To')}</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !data.valid_to && "text-muted-foreground"
-                        )}
+                        variant="outline"
+                        className={cn("w-48 justify-start text-left font-normal", !data.valid_to && "text-muted-foreground")}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {data.valid_to ? format(new Date(data.valid_to), "PPP", { locale: currentLocale }) : <span>{t('Pick a date')}</span>}
@@ -633,37 +641,42 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                 </div>
               </div>
 
-              <div className="grid gap-2">
+              {/* Row 3: Days — compact toggle buttons */}
+              <div className="grid gap-1.5">
                 <Label>{t('Days in week')}</Label>
-                <div className="flex flex-wrap gap-4 pt-2">
+                <div className="flex gap-1.5">
                   {[
-                    { key: 'day_monday', label: t('Mon') },
-                    { key: 'day_tuesday', label: t('Tue') },
+                    { key: 'day_monday',    label: t('Mon') },
+                    { key: 'day_tuesday',   label: t('Tue') },
                     { key: 'day_wednesday', label: t('Wed') },
-                    { key: 'day_thursday', label: t('Thu') },
-                    { key: 'day_friday', label: t('Fri') },
-                    { key: 'day_saturday', label: t('Sat') },
-                    { key: 'day_sunday', label: t('Sun') },
+                    { key: 'day_thursday',  label: t('Thu') },
+                    { key: 'day_friday',    label: t('Fri') },
+                    { key: 'day_saturday',  label: t('Sat') },
+                    { key: 'day_sunday',    label: t('Sun') },
                   ].map((day) => (
-                    <div key={day.key} className="flex items-center space-x-2">
-                      <Switch
-                        id={day.key}
-                        checked={(data as any)[day.key]}
-                        onCheckedChange={(checked) => setData(day.key as any, checked)}
-                      />
-                      <Label htmlFor={day.key} className="text-xs">{day.label}</Label>
-                    </div>
+                    <button
+                      key={day.key}
+                      type="button"
+                      onClick={() => setData(day.key as any, !(data as any)[day.key])}
+                      className={cn(
+                        'flex-1 rounded-md border py-1.5 text-xs font-medium transition-colors',
+                        (data as any)[day.key]
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-muted-foreground border-input hover:border-primary hover:text-foreground'
+                      )}
+                    >
+                      {day.label}
+                    </button>
                   ))}
                 </div>
               </div>
 
+              {/* Row 4: Start / End / Capacity / Type */}
               <div className="flex flex-wrap gap-4">
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label>{t('Start Time')}</Label>
                   <Select value={data.start_time} onValueChange={(v) => setData('start_time', v)}>
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 24 * 4 }, (_, i) => {
                         const h = String(Math.floor(i / 4)).padStart(2, '0');
@@ -673,14 +686,11 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                       })}
                     </SelectContent>
                   </Select>
-                  {errors.start_time && <p className="text-sm text-red-500">{errors.start_time}</p>}
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label>{t('End Time')}</Label>
                   <Select value={data.end_time} onValueChange={(v) => setData('end_time', v)}>
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 24 * 4 }, (_, i) => {
                         const h = String(Math.floor(i / 4)).padStart(2, '0');
@@ -690,9 +700,8 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                       })}
                     </SelectContent>
                   </Select>
-                  {errors.end_time && <p className="text-sm text-red-500">{errors.end_time}</p>}
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="capacity">{t('Capacity')}</Label>
                   <Input
                     id="capacity"
@@ -703,93 +712,88 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                     onChange={(e) => setData('capacity', e.target.value ? parseInt(e.target.value) : 1)}
                     className="w-20"
                   />
-                  {errors.capacity && <p className="text-sm text-red-500">{errors.capacity}</p>}
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="type">{t('Type')}</Label>
                   <select
                     id="type"
                     value={data.type || 1}
                     onChange={(e) => setData('type', parseInt(e.target.value))}
-                    className={cn(
-                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                      errors.type && "border-red-500"
-                    )}
+                    className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value={1}>{t('Full appointment')}</option>
                     <option value={2}>{t('Half appointment')}</option>
                   </select>
-                  {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
                 </div>
               </div>
 
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label>{t('Horses')}</Label>
-                  <button
-                    type="button"
-                    onClick={toggleAll}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {allSelected ? t('Deselect all') : t('Select all')}
-                  </button>
+              {/* Row 5: Horses + Teachers — side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label>{t('Horses')}</Label>
+                    <button
+                      type="button"
+                      onClick={toggleAll}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {allSelected ? t('Deselect all') : t('Select all')}
+                    </button>
+                  </div>
+                  <div className="border rounded-md p-2.5 grid grid-cols-1 gap-1.5 max-h-32 overflow-y-auto">
+                    {horses.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">{t('No horses available.')}</p>
+                    ) : (
+                      horses.map(h => (
+                        <label key={h.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={data.horse_ids.includes(h.id)}
+                            onChange={() => toggleHorse(h.id)}
+                            className="rounded border-gray-300"
+                          />
+                          {h.name}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {data.horse_ids.length === 0
+                      ? t('No selection = all horses available')
+                      : `${data.horse_ids.length} / ${horses.length} ${t('selected')}`}
+                  </p>
                 </div>
-                <div className="border rounded-md p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                  {horses.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic col-span-full">{t('No horses available.')}</p>
-                  ) : (
-                    horses.map(h => (
-                      <label key={h.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <input
-                          type="checkbox"
-                          checked={data.horse_ids.includes(h.id)}
-                          onChange={() => toggleHorse(h.id)}
-                          className="rounded border-gray-300"
-                        />
-                        {h.name}
-                      </label>
-                    ))
-                  )}
+
+                <div className="grid gap-1.5">
+                  <Label>{t('Teachers')}</Label>
+                  <div className="border rounded-md p-2.5 grid grid-cols-1 gap-1.5 max-h-32 overflow-y-auto">
+                    {teachers.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">{t('No teachers available.')}</p>
+                    ) : (
+                      teachers.map(tc => (
+                        <label key={tc.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={data.teacher_ids.includes(tc.id)}
+                            onChange={() => toggleTeacher(tc.id)}
+                            className="rounded border-gray-300"
+                          />
+                          {tc.name}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {data.teacher_ids.length === 0
+                      ? t('No selection = no assigned teacher')
+                      : `${data.teacher_ids.length} ${t('selected')}`}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {data.horse_ids.length === 0 ? t('No selection = all horses available') : `${data.horse_ids.length} / ${horses.length} ${t('selected')}`}
-                </p>
               </div>
 
-              <div className="grid gap-2">
-                <Label>{t('Teachers')}</Label>
-                <div className="border rounded-md p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                  {teachers.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic col-span-full">{t('No teachers available.')}</p>
-                  ) : (
-                    teachers.map(tc => (
-                      <label key={tc.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <input
-                          type="checkbox"
-                          checked={data.teacher_ids.includes(tc.id)}
-                          onChange={() => toggleTeacher(tc.id)}
-                          className="rounded border-gray-300"
-                        />
-                        {tc.name}
-                      </label>
-                    ))
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {data.teacher_ids.length === 0 ? t('No selection = no assigned teacher') : `${data.teacher_ids.length} ${t('selected')}`}
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={data.is_active}
-                  onCheckedChange={(checked) => setData('is_active', checked)}
-                />
-                <Label htmlFor="is_active">{t('Active')}</Label>
-              </div>
             </div>
-            <DialogFooter>
+
+            <DialogFooter className="shrink-0 pt-2">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 {t('Cancel')}
               </Button>

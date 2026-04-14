@@ -33,8 +33,13 @@ class NewsController extends Controller
             ];
         });
 
+        $user = auth()->user();
+
         return Inertia::render('Club/News/Index', [
-            'news' => $news,
+            'news'      => $news,
+            'canCreate' => $user->hasPermission('news.create'),
+            'canEdit'   => $user->hasPermission('news.edit'),
+            'canDelete' => $user->hasPermission('news.delete'),
         ]);
     }
 

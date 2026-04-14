@@ -789,5 +789,19 @@
     "coupon": "Gutschein",
     "Select coupons above": "Gutscheine oben auswaehlen",
     "Coupon type": "Gutscheinart",
-    "Amount": "Betrag"
+    "Amount": "Betrag",
+    "Overview of your coupon balance and transaction history.": "Übersicht über Ihr Kuponoguthaben und Transaktionsverlauf.",
+    "Total Balance": "Gesamtguthaben",
+    "coupons available": "Kupons verfügbar",
+    "available": "verfügbar",
+    "Total Purchases": "Gesamtkäufe",
+    "purchases made": "getätigte Käufe",
+    "No coupon transactions yet.": "Noch keine Kupon-Transaktionen.",
+    "Choose files": "Dateien wählen",
+    "No file chosen": "Keine Datei ausgewählt",
+    "Member": "Mitglied",
+    "Paid": "Bezahlt",
+    "Unpaid": "Nicht bezahlt",
+    "Coupons": "Kupons",
+    "Show active/inactive users": "Aktive/inaktive Benutzer anzeigen"
 }

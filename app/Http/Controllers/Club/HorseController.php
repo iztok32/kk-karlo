@@ -33,8 +33,13 @@ class HorseController extends Controller
             ];
         });
 
+        $user = auth()->user();
+
         return Inertia::render('Club/Horses/Index', [
-            'horses' => $horses
+            'horses'    => $horses,
+            'canCreate' => $user->hasPermission('horses.create'),
+            'canEdit'   => $user->hasPermission('horses.edit'),
+            'canDelete' => $user->hasPermission('horses.delete'),
         ]);
     }
 
