@@ -803,5 +803,20 @@
     "Paid": "Plaćeno",
     "Unpaid": "Neplaćeno",
     "Coupons": "Kuponi",
-    "Show active/inactive users": "Prikaži aktivne/neaktivne korisnike"
+    "Show active/inactive users": "Prikaži aktivne/neaktivne korisnike",
+    "Good morning": "Dobro jutro",
+    "Good afternoon": "Dobar dan",
+    "Good evening": "Dobra večer",
+    "Make Reservation": "Rezerviraj termin",
+    "Buy Coupons": "Kupi kupone",
+    "Buy": "Kupi",
+    "All": "Sve",
+    "Membership fee unpaid": "Članarina nije plaćena",
+    "Your membership fee has not been paid yet. Please contact the club administration.": "Vaša članarina još nije plaćena. Molimo kontaktirajte upravu kluba.",
+    "Reservations today": "Rezervacije danas",
+    "Active members": "Aktivni članovi",
+    "Active horses": "Aktivni konji",
+    "Today": "Danas",
+    "Tomorrow": "Sutra",
+    ":days days": "za :days dana"
 }

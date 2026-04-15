@@ -14,6 +14,7 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $isAdmin = $user->hasPermission('users.view');
 
         $news = News::with('images')
             ->where('is_active', true)
@@ -36,15 +37,19 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Fix: purchase adds, anything else subtracts
         $coupons = Coupon::with('couponType')
             ->where('user_id', $user->id)
             ->get()
             ->groupBy('coupon_type_id')
             ->map(function ($group) {
                 $type = $group->first()->couponType;
+                $balance = $group->sum(function ($c) {
+                    return $c->transaction_type === 'purchase' ? $c->quantity : -$c->quantity;
+                });
                 return [
                     'type_name' => $type?->name ?? '—',
-                    'balance' => $group->sum('quantity'),
+                    'balance' => (int) $balance,
                 ];
             })
             ->filter(fn($item) => $item['balance'] > 0)
@@ -84,11 +89,22 @@ class DashboardController extends Controller
                 ];
             });
 
+        $adminStats = $isAdmin ? [
+            'reservations_today' => Reservation::whereDate('reservation_date', now()->toDateString())->count(),
+            'active_members'     => \App\Models\User::where('is_active', true)->where('is_member', true)->count(),
+            'active_horses'      => Horse::where('is_active', true)->count(),
+        ] : null;
+
         return Inertia::render('Dashboard', [
-            'news' => $news,
-            'coupons' => $coupons,
+            'news'         => $news,
+            'coupons'      => $coupons,
             'reservations' => $reservations,
-            'horses' => $horses,
+            'horses'       => $horses,
+            'membership'   => [
+                'is_member'       => (bool) $user->is_member,
+                'membership_paid' => (bool) $user->membership_paid,
+            ],
+            'adminStats'   => $adminStats,
         ]);
     }
 }

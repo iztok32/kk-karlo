@@ -102,7 +102,7 @@ export default function SlotChip({
           {isFull ? 'Polno zasedeno' : `${count} / ${capacity ?? '∞'} rezervacij`}
         </p>
         {reservations.map((r) => (
-          <p key={r.id} className="text-xs">🐴 {r.horse.name}</p>
+          <p key={r.id} className="text-xs">🐴 {r.horse.name} – {r.user.name}</p>
         ))}
         {userHasReservation && <p className="text-xs font-medium">✓ Imate rezervacijo</p>}
         {isTeacherSlot && <p className="text-xs opacity-70">★ Vaš termin</p>}
@@ -146,9 +146,12 @@ export default function SlotChip({
           )}
         </button>
       </TooltipTrigger>
-      {disabledReason && (
+      {(reservations.length > 0 || disabledReason) && (
         <TooltipContent>
-          <p className="text-xs">⚠ {disabledReason}</p>
+          {reservations.map((r) => (
+            <p key={r.id} className="text-xs">🐴 {r.horse.name} – {r.user.name}</p>
+          ))}
+          {disabledReason && <p className="text-xs text-amber-300 mt-1">⚠ {disabledReason}</p>}
         </TooltipContent>
       )}
     </Tooltip>

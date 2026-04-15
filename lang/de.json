@@ -803,5 +803,20 @@
     "Paid": "Bezahlt",
     "Unpaid": "Nicht bezahlt",
     "Coupons": "Kupons",
-    "Show active/inactive users": "Aktive/inaktive Benutzer anzeigen"
+    "Show active/inactive users": "Aktive/inaktive Benutzer anzeigen",
+    "Good morning": "Guten Morgen",
+    "Good afternoon": "Guten Tag",
+    "Good evening": "Guten Abend",
+    "Make Reservation": "Termin buchen",
+    "Buy Coupons": "Kupons kaufen",
+    "Buy": "Kaufen",
+    "All": "Alle",
+    "Membership fee unpaid": "Mitgliedsbeitrag nicht bezahlt",
+    "Your membership fee has not been paid yet. Please contact the club administration.": "Ihr Mitgliedsbeitrag wurde noch nicht bezahlt. Bitte wenden Sie sich an die Klubverwaltung.",
+    "Reservations today": "Reservierungen heute",
+    "Active members": "Aktive Mitglieder",
+    "Active horses": "Aktive Pferde",
+    "Today": "Heute",
+    "Tomorrow": "Morgen",
+    ":days days": "in :days Tagen"
 }
