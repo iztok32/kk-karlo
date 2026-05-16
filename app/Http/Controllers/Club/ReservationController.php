@@ -36,7 +36,7 @@ class ReservationController extends Controller
             ->orderBy('name')
             ->get();
 
-        $reservations = Reservation::with(['user:id,name', 'horse:id,name'])
+        $reservations = Reservation::with(['user:id,name', 'horse:id,name', 'createdBy:id,name'])
             ->whereBetween('reservation_date', [$startDate, $endDate])
             ->whereNull('deleted_at')
             ->get();
@@ -78,6 +78,15 @@ class ReservationController extends Controller
             config('notifications.enable_sms', true)    ? 'sms'    : null,
         ]);
 
+        $holidays = \App\Models\Holiday::whereBetween('date', [$startDate, $endDate])
+            ->get(['date', 'name', 'local_name', 'country_code'])
+            ->map(fn($h) => [
+                'date'         => $h->date->format('Y-m-d'),
+                'name'         => $h->name,
+                'local_name'   => $h->local_name,
+                'country_code' => $h->country_code,
+            ]);
+
         return Inertia::render('Club/Reservations/Index', [
             'appointments'             => $appointments,
             'reservations'             => $reservations,
@@ -99,6 +108,7 @@ class ReservationController extends Controller
             'canNotifySlots'           => $isAdmin || $isTeacher,
             'myTeacherAppointmentIds'  => $myTeacherAppointmentIds,
             'enabledChannels'          => array_values($enabledChannels),
+            'holidays'                 => $holidays->values(),
         ]);
     }
 
@@ -183,6 +193,7 @@ class ReservationController extends Controller
             return back()->withErrors(['appointment_id' => __('User already has a reservation for this appointment on this date.')]);
         }
 
+        $validated['created_by_user_id'] = auth()->id();
         $reservation = Reservation::create($validated);
 
         // Auto-deduct a coupon if the user has a positive balance of any type

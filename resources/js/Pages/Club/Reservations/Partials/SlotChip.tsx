@@ -110,51 +110,57 @@ export default function SlotChip({
       </TooltipContent>
     </Tooltip>
   ) : (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          onClick={isDisabled ? undefined : onClick}
-          className={cn(
-            'w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors',
-            colorClass,
-            isDisabled ? 'cursor-default' : 'cursor-pointer',
-          )}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              {appointment.start_time && (
-                <span className="flex items-center gap-1 font-semibold whitespace-nowrap">
-                  <Clock className="w-3.5 h-3.5" />
-                  {formatTime(appointment.start_time)}
-                  {appointment.end_time && ` – ${formatTime(appointment.end_time)}`}
-                </span>
-              )}
-              <span className="font-medium truncate">{appointment.name}</span>
-              {isTeacherSlot && <span className="text-xs opacity-60">★</span>}
-            </div>
-            <span className="font-bold whitespace-nowrap text-xs">
-              {isFull ? 'POLNO' : `${count} / ${capacity ?? '∞'}`}
-              {userHasReservation && ' ✓'}
-            </span>
-          </div>
-          {reservations.length > 0 && (
-            <div className="flex flex-wrap gap-x-3 mt-1.5">
-              {reservations.map((r) => (
-                <span key={r.id} className="text-xs opacity-80">🐴 {r.horse.name}</span>
-              ))}
-            </div>
-          )}
-        </button>
-      </TooltipTrigger>
-      {(reservations.length > 0 || disabledReason) && (
-        <TooltipContent>
-          {reservations.map((r) => (
-            <p key={r.id} className="text-xs">🐴 {r.horse.name} – {r.user.name}</p>
-          ))}
-          {disabledReason && <p className="text-xs text-amber-300 mt-1">⚠ {disabledReason}</p>}
-        </TooltipContent>
+    <button
+      onClick={isDisabled ? undefined : onClick}
+      className={cn(
+        'w-full text-left px-2.5 py-2 rounded-lg border transition-colors',
+        colorClass,
+        isDisabled ? 'cursor-default' : 'cursor-pointer',
       )}
-    </Tooltip>
+    >
+      {/* Header: ura + ime + zaseditev */}
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0 flex-1">
+          {appointment.start_time && (
+            <div className="text-xs font-bold leading-tight">
+              <Clock className="inline w-3 h-3 mr-0.5 opacity-70" />
+              {formatTime(appointment.start_time)}
+              {appointment.end_time && `–${formatTime(appointment.end_time)}`}
+              {isTeacherSlot && <span className="ml-1 opacity-50 text-[10px]">★</span>}
+            </div>
+          )}
+          <div className="text-xs font-medium leading-tight mt-0.5 break-words">
+            {appointment.name}
+          </div>
+        </div>
+        <span className="text-xs font-bold shrink-0 whitespace-nowrap pl-1">
+          {isFull ? 'POLNO' : `${count}/${capacity ?? '∞'}`}
+          {userHasReservation && ' ✓'}
+        </span>
+      </div>
+
+      {/* Seznam rezervacij */}
+      {reservations.length > 0 && (
+        <div className="mt-1.5 pt-1.5 border-t border-current/20 space-y-0.5">
+          {reservations.map((r) => (
+            <div
+              key={r.id}
+              className={cn(
+                'text-xs leading-snug',
+                r.user_id === authUserId ? 'font-semibold' : 'opacity-75',
+              )}
+            >
+              🐴 {r.horse.name} · {r.user.name}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Opozorilo za omejitev */}
+      {disabledReason && (
+        <div className="mt-1 text-[10px] opacity-70">⚠ {disabledReason}</div>
+      )}
+    </button>
   );
 
   if (!canNotify || enabledChannels.length === 0) return chipButton;

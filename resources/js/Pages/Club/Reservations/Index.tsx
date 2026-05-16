@@ -33,6 +33,7 @@ import {
   NotifySlot,
   LateCancelInfo,
   Teacher,
+  Holiday,
 } from './types';
 import CalendarViews from './Partials/CalendarViews';
 import UpcomingReservations from './Partials/UpcomingReservations';
@@ -46,6 +47,7 @@ import LateCancellationDialog from './Partials/LateCancellationDialog';
 interface Props {
   appointments: Appointment[];
   reservations: Reservation[];
+  holidays: Holiday[];
   horses: HorseItem[];
   users: UserItem[];
   canReserveForOthers: boolean;
@@ -87,6 +89,7 @@ function getDateRange(date: Date, viewType: string): { start: string; end: strin
 export default function Index({
   appointments,
   reservations,
+  holidays = [],
   horses,
   users,
   canReserveForOthers,
@@ -338,6 +341,7 @@ export default function Index({
             calendarDays={calendarDays}
             appointments={appointments}
             reservations={reservations}
+            holidays={holidays}
             authUserId={authUserId}
             reservationLimits={reservationLimits}
             myTeacherAppointmentIds={myTeacherAppointmentIds}

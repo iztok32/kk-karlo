@@ -31,12 +31,23 @@ export interface Reservation {
   user_id: number;
   reservation_date: string;
   notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  created_by_user_id: number | null;
   horse: { id: number; name: string };
   user: { id: number; name: string };
+  created_by: { id: number; name: string } | null;
 }
 
 export interface ReservationWithAppointment extends Reservation {
   appointment: Appointment;
+}
+
+export interface Holiday {
+  date: string;        // 'yyyy-MM-dd'
+  name: string;
+  local_name: string | null;
+  country_code: string;
 }
 
 export interface HorseItem {

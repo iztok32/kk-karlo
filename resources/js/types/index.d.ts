@@ -13,6 +13,14 @@ export interface CouponBalance {
     balance: number;
 }
 
+export interface UpcomingReservation {
+    id: number;
+    date: string;
+    name: string;
+    start_time: string | null;
+    end_time: string | null;
+}
+
 export interface User {
     id: number;
     name: string;
@@ -41,6 +49,8 @@ export interface User {
     membership_paid: boolean;
     notify_free_slots: boolean;
     coupon_balances?: CouponBalance[];
+    upcoming_reservations_count?: number;
+    upcoming_reservations?: UpcomingReservation[];
 }
 
 export interface HorsemanType {

@@ -1,18 +1,19 @@
 import { CalendarDays, User } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import {
   format,
+  parseISO,
   isToday,
   isSameMonth,
-  startOfWeek,
-  endOfWeek,
 } from 'date-fns';
 import type { Locale } from 'date-fns';
-import { Plus, Trash2, Clock } from 'lucide-react';
+import { Plus, Trash2, Clock, Info } from 'lucide-react';
 import {
   Appointment,
+  Holiday,
   Reservation,
   ReservationLimits,
   formatTime,
@@ -20,12 +21,22 @@ import {
 } from '../types';
 import SlotChip from './SlotChip';
 
+// Maps app locale → ISO 3166-1 alpha-2 country code
+const LOCALE_COUNTRY: Record<string, string> = {
+  sl: 'SI',
+  hr: 'HR',
+  it: 'IT',
+  de: 'DE',
+  en: 'GB',
+};
+
 interface CalendarViewsProps {
   view: 'month' | 'week' | 'day';
   anchorDate: Date;
   calendarDays: Date[];
   appointments: Appointment[];
   reservations: Reservation[];
+  holidays: Holiday[];
   authUserId: number;
   reservationLimits: ReservationLimits;
   myTeacherAppointmentIds: number[];
@@ -55,7 +66,7 @@ function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (ke
   return null;
 }
 
-const weekDayHeaders = ['Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob', 'Ned'];
+const weekDayHeaders = ['Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota', 'Nedelja'];
 
 export default function CalendarViews({
   view,
@@ -63,6 +74,7 @@ export default function CalendarViews({
   calendarDays,
   appointments,
   reservations,
+  holidays,
   authUserId,
   reservationLimits,
   myTeacherAppointmentIds,
@@ -74,7 +86,14 @@ export default function CalendarViews({
   onCancel,
   onNotify,
 }: CalendarViewsProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+
+  const countryCode = LOCALE_COUNTRY[locale] ?? 'SI';
+
+  function getHolidayForDay(date: Date): Holiday | undefined {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return holidays.find(h => h.date === dateStr && h.country_code === countryCode);
+  }
 
   function getSlotReservations(appointmentId: number, date: Date): Reservation[] {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -93,10 +112,79 @@ export default function CalendarViews({
     return myTeacherAppointmentIds.includes(appointmentId);
   }
 
+  // ── Compact slot (month view) ────────────────────────────────────────────────
+  function renderCompactSlot(appt: Appointment, date: Date, restriction: string | null) {
+    const slotRes = getSlotReservations(appt.id, date);
+    const count = slotRes.length;
+    const capacity = appt.capacity;
+    const free = capacity !== null ? Math.max(0, capacity - count) : null;
+    const isFull = capacity !== null && count >= capacity;
+    const userHasRes = slotRes.some((r) => r.user_id === authUserId);
+    const isTeacher = myTeacherAppointmentIds.includes(appt.id);
+    const isClickable = !restriction && !(isFull && !userHasRes);
+
+    const timeStr = appt.start_time
+      ? `${formatTime(appt.start_time)}${appt.end_time ? `–${formatTime(appt.end_time)}` : ''}`
+      : appt.name;
+
+    const freeLabel = free !== null ? `(${free})` : '';
+
+    return (
+      <Tooltip key={appt.id}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={isClickable ? () => onOpenSlot(appt, date) : undefined}
+            className={cn(
+              'w-full text-left text-xs leading-snug px-0.5 py-px rounded',
+              isClickable ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : 'cursor-default',
+              userHasRes ? 'font-semibold' : '',
+              isFull && !userHasRes ? 'opacity-50' : '',
+            )}
+          >
+            {timeStr} {freeLabel}
+            {userHasRes && <span className="ml-0.5">🐴</span>}
+            {isTeacher && <span className="ml-0.5 opacity-50 text-[10px]">★</span>}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-[220px]">
+          <p className="font-medium">{appt.name}</p>
+          {appt.start_time && (
+            <p className="text-xs opacity-75">
+              {formatTime(appt.start_time)}{appt.end_time && ` – ${formatTime(appt.end_time)}`}
+            </p>
+          )}
+          <p className="text-xs mt-0.5">
+            {isFull
+              ? t('Full')
+              : free !== null
+              ? `${free} ${t('free spots')}`
+              : `${count} ${t('reservations')}`}
+          </p>
+          {slotRes.map((r) => (
+            <p key={r.id} className="text-xs">🐴 {r.horse.name} – {r.user.name}</p>
+          ))}
+          {userHasRes && <p className="text-xs font-medium text-green-400 mt-0.5">✓ {t('You have a reservation')}</p>}
+          {isTeacher && <p className="text-xs opacity-70">★ {t('Your appointment')}</p>}
+          {restriction && <p className="text-xs text-amber-300 mt-1">⚠ {restriction}</p>}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // ── Full slot row (week view) ────────────────────────────────────────────────
   function renderDaySlots(date: Date, compact: boolean) {
     const dayAppts = getAppointmentsForDay(date);
     if (dayAppts.length === 0) return null;
     const restriction = getDateRestrictionMessage(date, reservationLimits, t);
+
+    if (compact) {
+      return (
+        <div className="flex flex-col mt-0.5">
+          {dayAppts.map((appt) => renderCompactSlot(appt, date, restriction))}
+        </div>
+      );
+    }
 
     return (
       <div className="flex flex-col gap-0.5 mt-1">
@@ -107,7 +195,7 @@ export default function CalendarViews({
             reservations={getSlotReservations(appt.id, date)}
             authUserId={authUserId}
             onClick={() => restriction ? undefined : onOpenSlot(appt, date)}
-            compact={compact}
+            compact={false}
             disabled={!!restriction}
             disabledReason={restriction ?? undefined}
             isTeacherSlot={myTeacherAppointmentIds.includes(appt.id)}
@@ -130,6 +218,7 @@ export default function CalendarViews({
 
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-border">
           {weekDayHeaders.map((d) => (
             <div key={d} className="py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -137,25 +226,80 @@ export default function CalendarViews({
             </div>
           ))}
         </div>
-        <div className="flex-1 grid grid-rows-[repeat(auto-fill,minmax(0,1fr))]" style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(80px, 1fr))` }}>
+
+        {/* Calendar grid */}
+        <div
+          className="flex-1 overflow-auto grid"
+          style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(80px, 1fr))` }}
+        >
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7">
               {week.map((day) => (
                 <div
                   key={day.toISOString()}
-                  className={cn('border-b border-r border-border p-1 min-h-[80px] overflow-hidden', !isSameMonth(day, anchorDate) && 'bg-muted/30')}
+                  className={cn(
+                    'border-b border-r border-border p-1 min-h-[80px] overflow-hidden',
+                    !isSameMonth(day, anchorDate) && 'bg-muted/30',
+                  )}
                 >
-                  <span className={cn(
-                    'inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full',
-                    isToday(day) ? 'bg-primary text-primary-foreground' : isSameMonth(day, anchorDate) ? 'text-foreground' : 'text-muted-foreground',
-                  )}>
-                    {format(day, 'd')}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className={cn(
+                      'inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full',
+                      isToday(day)
+                        ? 'bg-primary text-primary-foreground'
+                        : isSameMonth(day, anchorDate)
+                        ? 'text-foreground'
+                        : 'text-muted-foreground',
+                    )}>
+                      {format(day, 'd')}
+                    </span>
+                    {(() => {
+                      const holiday = getHolidayForDay(day);
+                      if (!holiday) return null;
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-xs leading-none cursor-default select-none">⭐</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {holiday.local_name ?? holiday.name}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })()}
+                  </div>
                   {renderDaySlots(day, true)}
                 </div>
               ))}
             </div>
           ))}
+        </div>
+
+        {/* Legend */}
+        <div className="shrink-0 border-t border-border px-4 py-2.5">
+          <p className="text-xs font-semibold mb-1.5">{t('Legend')}</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-1.5 items-center text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center whitespace-nowrap px-1.5 h-5 rounded-sm border border-border bg-muted/60 text-[10px]">
+                17:00–18:00 (3)
+              </span>
+              <span>termin — v oklepaju <strong className="text-foreground">prosta mesta</strong></span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center whitespace-nowrap px-1.5 h-5 rounded-sm border border-red-200 bg-red-100 text-red-700 text-[10px] opacity-80">
+                17:00 POLNO
+              </span>
+              <span>ni prostih mest</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span>🐴</span>
+              <span>imam rezervacijo</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span>⭐</span>
+              <span>državni praznik</span>
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -233,7 +377,11 @@ export default function CalendarViews({
               </div>
               <span className={cn(
                 'inline-block px-2.5 py-1 rounded-full text-xs font-semibold',
-                isFull ? 'bg-red-100 text-red-700' : count / (capacity ?? Infinity) >= 0.7 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700',
+                isFull
+                  ? 'bg-red-100 text-red-700'
+                  : count / (capacity ?? Infinity) >= 0.7
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-green-100 text-green-700',
               )}>
                 {isFull ? 'POLNO' : `${count} / ${capacity ?? '∞'}`}
               </span>
@@ -241,25 +389,68 @@ export default function CalendarViews({
 
             {slotRes.length > 0 && (
               <div className="mb-3 space-y-1.5">
-                {slotRes.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between gap-2 bg-muted/50 rounded-lg px-3 py-1.5 text-sm">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                        {r.user.name}
-                        {r.user_id === authUserId && <span className="text-xs text-primary font-medium">(jaz)</span>}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <span className="text-xs">🐴</span> {r.horse.name}
-                      </span>
+                {slotRes.map((r) => {
+                  const createdAt  = r.created_at  ? parseISO(r.created_at)  : null;
+                  const updatedAt  = r.updated_at  ? parseISO(r.updated_at)  : null;
+                  const wasEdited  = createdAt && updatedAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) > 5000;
+                  const creatorName = r.created_by?.name ?? null;
+                  const fmt = (d: Date) => format(d, 'd. M. yyyy HH:mm');
+
+                  return (
+                    <div key={r.id} className="flex items-center justify-between gap-2 bg-muted/50 rounded-lg px-3 py-1.5 text-sm">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="flex items-center gap-1 shrink-0">
+                          <User className="w-3.5 h-3.5 text-muted-foreground" />
+                          {r.user.name}
+                          {r.user_id === authUserId && <span className="text-xs text-primary font-medium">(jaz)</span>}
+                        </span>
+                        <span className="flex items-center gap-1 text-muted-foreground shrink-0">
+                          <span className="text-xs">🐴</span> {r.horse.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Info tooltip */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                              <Info className="w-3.5 h-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="text-xs space-y-0.5 max-w-[220px]">
+                            {createdAt && (
+                              <p>
+                                <span className="opacity-60">Oddano:</span>{' '}
+                                {fmt(createdAt)}
+                              </p>
+                            )}
+                            {creatorName && (
+                              <p>
+                                <span className="opacity-60">Ustvaril:</span>{' '}
+                                {creatorName}
+                                {r.created_by_user_id === r.user_id ? ' (sam)' : ''}
+                              </p>
+                            )}
+                            {!creatorName && !createdAt && (
+                              <p className="opacity-60">Ni podatkov o ustvarjanju.</p>
+                            )}
+                            {wasEdited && updatedAt && (
+                              <p className="text-amber-400">
+                                <span className="opacity-80">Spremenjena:</span>{' '}
+                                {fmt(updatedAt)}
+                              </p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                        {/* Delete button */}
+                        {(r.user_id === authUserId || canReserveForOthers) && (
+                          <button onClick={() => onCancel(r)} className="text-red-500 hover:text-red-700 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {(r.user_id === authUserId || canReserveForOthers) && (
-                      <button onClick={() => onCancel(r)} className="text-red-500 hover:text-red-700 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

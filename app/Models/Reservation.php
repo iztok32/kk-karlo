@@ -16,6 +16,7 @@ class Reservation extends Model
         'user_id',
         'reservation_date',
         'notes',
+        'created_by_user_id',
     ];
 
     protected $casts = [
@@ -35,6 +36,11 @@ class Reservation extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     public function coupons()

@@ -60,6 +60,35 @@ class HandleInertiaRequests extends Middleware
                         ->get()
                         ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'balance' => (int) $r->balance])
                         ->toArray(),
+                    'upcoming_reservations_count' => DB::table('reservations')
+                        ->where('user_id', $user->id)
+                        ->whereNull('deleted_at')
+                        ->where('reservation_date', '>=', now()->toDateString())
+                        ->count(),
+                    'upcoming_reservations' => DB::table('reservations')
+                        ->join('appointments', 'reservations.appointment_id', '=', 'appointments.id')
+                        ->select(
+                            'reservations.id',
+                            'reservations.reservation_date',
+                            'appointments.name',
+                            'appointments.start_time',
+                            'appointments.end_time',
+                        )
+                        ->where('reservations.user_id', $user->id)
+                        ->whereNull('reservations.deleted_at')
+                        ->where('reservations.reservation_date', '>=', now()->toDateString())
+                        ->orderBy('reservations.reservation_date')
+                        ->orderBy('appointments.start_time')
+                        ->limit(5)
+                        ->get()
+                        ->map(fn($r) => [
+                            'id'         => $r->id,
+                            'date'       => $r->reservation_date,
+                            'name'       => $r->name,
+                            'start_time' => $r->start_time ? substr($r->start_time, 0, 5) : null,
+                            'end_time'   => $r->end_time   ? substr($r->end_time,   0, 5) : null,
+                        ])
+                        ->toArray(),
                 ]) : null,
             ],
             'locale' => app()->getLocale(),

@@ -99,6 +99,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('reservations', \App\Http\Controllers\Club\ReservationController::class)->only(['index', 'store', 'destroy']);
     Route::post('reservations/{reservation}/notify-late-cancellation', [\App\Http\Controllers\Club\ReservationController::class, 'notifyLateCancellation'])->name('reservations.notify-late-cancellation');
     Route::resource('coupons', \App\Http\Controllers\Club\CouponController::class)->only(['index', 'store', 'destroy']);
+    Route::middleware('permission:statistics.view')->group(function () {
+        Route::get('statistics', [\App\Http\Controllers\Club\StatisticsController::class, 'index'])->name('statistics.index');
+    });
     Route::get('purchase', [\App\Http\Controllers\Club\PurchaseController::class, 'index'])->name('purchase.index');
     Route::post('purchase/intent', [\App\Http\Controllers\Club\PurchaseController::class, 'createIntent'])->name('purchase.intent');
     Route::post('purchase/confirm', [\App\Http\Controllers\Club\PurchaseController::class, 'confirm'])->name('purchase.confirm');
