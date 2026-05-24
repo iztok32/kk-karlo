@@ -26,6 +26,7 @@ class User extends Authenticatable implements AuditableContract
         'email',
         'password',
         'is_active',
+        'is_teacher',
         'gsm_number',
         'avatar',
         'config',
@@ -69,6 +70,7 @@ class User extends Authenticatable implements AuditableContract
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_teacher' => 'boolean',
             'config' => 'array',
             // Profile casts
             'date_of_birth' => 'date',
@@ -85,6 +87,20 @@ class User extends Authenticatable implements AuditableContract
     public function roles()
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    public function appointmentTypes()
+    {
+        return $this->belongsToMany(AppointmentType::class, 'user_appointment_type');
+    }
+
+    /**
+     * Returns IDs of allowed appointment types.
+     * Empty array means unrestricted (all types allowed).
+     */
+    public function allowedAppointmentTypeIds(): array
+    {
+        return $this->appointmentTypes()->pluck('appointment_types.id')->toArray();
     }
 
     public function horsemanType()

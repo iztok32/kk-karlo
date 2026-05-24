@@ -16,7 +16,7 @@ import {
 } from '@/Components/ui/dropdown-menu';
 import {
     Plus, Edit2, Trash2, Mail, Check, X, Search, LayoutGrid, LayoutList,
-    MoreHorizontal, Ticket, UserCheck, UserX,
+    MoreHorizontal, Ticket, UserCheck, UserX, GraduationCap,
 } from 'lucide-react';
 import { PageProps } from '@/types';
 import {
@@ -51,10 +51,12 @@ interface User {
     name: string;
     email: string;
     is_active: boolean;
+    is_teacher: boolean;
     is_member: boolean;
     membership_paid: boolean;
     coupon_balance: number;
     roles: string[];
+    appointment_type_ids: number[];
     created_at: string;
     deleted_at: string | null;
 }
@@ -70,13 +72,20 @@ interface HorsemanType {
     name: string;
 }
 
+interface AppointmentTypeItem {
+    id: number;
+    name: string;
+    horses_selectable: boolean;
+}
+
 interface Props {
     users: User[];
     roles: Role[];
     horsemanTypes: HorsemanType[];
+    appointmentTypes: AppointmentTypeItem[];
 }
 
-export default function Index({ users, roles, horsemanTypes }: Props) {
+export default function Index({ users, roles, horsemanTypes, appointmentTypes }: Props) {
     const { t } = useTranslation();
     const { auth } = usePage<PageProps>().props;
     const userPermissions = auth.user?.permissions || [];
@@ -91,6 +100,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showActive, setShowActive] = useState(true);
+    const [showTeachersOnly, setShowTeachersOnly] = useState(false);
     const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
     const handleCreate = () => {
@@ -130,6 +140,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
 
     const filteredUsers = users.filter(user => {
         if (user.is_active !== showActive) return false;
+        if (showTeachersOnly && !user.is_teacher) return false;
         const query = searchQuery.toLowerCase();
         return (
             user.name.toLowerCase().includes(query) ||
@@ -281,6 +292,21 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                 </TooltipContent>
                             </Tooltip>
 
+                            {/* Teacher Filter */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant={showTeachersOnly ? 'default' : 'outline'}
+                                        size="icon"
+                                        className="h-9 w-9"
+                                        onClick={() => setShowTeachersOnly(v => !v)}
+                                    >
+                                        <GraduationCap className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('Show teachers only')}</TooltipContent>
+                            </Tooltip>
+
                             {/* View Mode Toggle */}
                             <div className="flex items-center border rounded-md">
                                 <Button
@@ -320,6 +346,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                         <TableHead>{t('Email')}</TableHead>
                                         <TableHead className="text-center">{t('Status')}</TableHead>
                                         <TableHead className="text-center">{t('Member')}</TableHead>
+                                        <TableHead className="text-center">{t('Teacher')}</TableHead>
                                         <TableHead className="text-center">{t('Coupons')}</TableHead>
                                         <TableHead>{t('Roles')}</TableHead>
                                         <TableHead className="w-12"></TableHead>
@@ -331,11 +358,27 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                             <TableRow key={user.id} className={user.deleted_at ? 'opacity-50' : ''}>
                                                 <TableCell className="font-medium">{user.name}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <StatusIcon user={user} />
+                                                <TableCell>
+                                                    <div className="flex justify-center">
+                                                        <StatusIcon user={user} />
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell className="text-center">
-                                                    <MemberIcon user={user} />
+                                                <TableCell>
+                                                    <div className="flex justify-center">
+                                                        <MemberIcon user={user} />
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex justify-center">
+                                                        {user.is_teacher && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <GraduationCap className="h-4 w-4 text-primary" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>{t('Teacher')}</TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <CouponBadge balance={user.coupon_balance} />
@@ -356,7 +399,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                                 {t('No users found.')}
                                             </TableCell>
                                         </TableRow>
@@ -435,6 +478,7 @@ export default function Index({ users, roles, horsemanTypes }: Props) {
                         user={editingUser}
                         roles={roles}
                         horsemanTypes={horsemanTypes}
+                        appointmentTypes={appointmentTypes}
                         onClose={handleCloseSheet}
                     />
                 </SheetContent>

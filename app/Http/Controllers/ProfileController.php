@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\AppointmentType;
+use App\Models\Notification;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,19 +52,29 @@ class ProfileController extends Controller
             ];
         })->values();
 
+        $allTypes = AppointmentType::where('is_active', true)
+            ->whereNull('deleted_at')
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'horses_selectable']);
+
+        $assignedTypeIds = $user->appointmentTypes()->pluck('appointment_types.id')->toArray();
+
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
-            'status'          => session('status'),
-            'permissions'     => [
+            'mustVerifyEmail'      => $user instanceof MustVerifyEmail,
+            'status'               => session('status'),
+            'permissions'          => [
                 'canView'   => $user->hasPermission('profile.view'),
                 'canEdit'   => $user->hasPermission('profile.edit'),
                 'canDelete' => $user->hasPermission('profile.delete'),
             ],
-            'horsemanTypes'   => \App\Models\HorsemanType::where('is_active', true)
+            'horsemanTypes'        => \App\Models\HorsemanType::where('is_active', true)
                 ->orderBy('display_order')
                 ->get(['id', 'name']),
-            'couponBalances'  => $couponBalances,
-            'couponHistory'   => $couponHistory,
+            'couponBalances'       => $couponBalances,
+            'couponHistory'        => $couponHistory,
+            'allAppointmentTypes'  => $allTypes,
+            'assignedTypeIds'      => $assignedTypeIds,
         ]);
     }
 
@@ -186,5 +200,50 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    /**
+     * Send a request to admins to grant access to additional appointment types.
+     */
+    public function requestAppointmentType(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'type_ids' => 'required|array|min:1',
+            'type_ids.*' => 'integer|exists:appointment_types,id',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $user = $request->user();
+        $typeNames = AppointmentType::whereIn('id', $validated['type_ids'])->pluck('name')->join(', ');
+
+        $subject = __('Request for appointment type access');
+        $message = __('User :name (:email) is requesting access to the following appointment types: :types.', [
+            'name'  => $user->name,
+            'email' => $user->email,
+            'types' => $typeNames,
+        ]);
+
+        if (!empty($validated['note'])) {
+            $message .= "\n\n" . __('Note') . ': ' . $validated['note'];
+        }
+
+        // Send to all users with users.edit permission (administrators)
+        $admins = User::whereHas('roles.permissions', fn($q) => $q->where('slug', 'users.edit'))
+            ->where('is_active', true)
+            ->pluck('id');
+
+        foreach ($admins as $adminId) {
+            Notification::create([
+                'sender_id'    => $user->id,
+                'recipient_id' => $adminId,
+                'type'         => 'portal',
+                'subject'      => $subject,
+                'message'      => $message,
+                'status'       => 'sent',
+                'sent_at'      => now(),
+            ]);
+        }
+
+        return Redirect::back()->with('success', __('Your request has been sent to the administrators.'));
     }
 }

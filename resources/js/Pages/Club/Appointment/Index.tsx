@@ -49,7 +49,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { router } from '@inertiajs/react';
 import { useTranslation } from '@/lib/i18n';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { sl, enGB, hr, it, de } from 'date-fns/locale';
 import {
   Popover,
@@ -67,6 +67,12 @@ interface HorseItem {
 interface TeacherItem {
   id: number;
   name: string;
+}
+
+interface AppointmentTypeItem {
+  id: number;
+  name: string;
+  horses_selectable: boolean;
 }
 
 interface Appointment {
@@ -95,6 +101,7 @@ interface Props {
   appointments: Appointment[];
   horses: HorseItem[];
   teachers: TeacherItem[];
+  appointmentTypes: AppointmentTypeItem[];
 }
 
 const DaysRow = ({ item }: { item: Appointment }) => {
@@ -132,12 +139,14 @@ function SortableRow({
   item,
   horses,
   teachers,
+  appointmentTypes,
   onEdit,
   onDelete,
 }: {
   item: Appointment;
   horses: HorseItem[];
   teachers: TeacherItem[];
+  appointmentTypes: AppointmentTypeItem[];
   onEdit: (item: Appointment) => void;
   onDelete: (item: Appointment) => void;
 }) {
@@ -169,13 +178,8 @@ function SortableRow({
     }
   };
 
-  const getTypeLabel = (type: number | null) => {
-    switch (type) {
-      case 1: return t('Full appointment');
-      case 2: return t('Half appointment');
-      default: return t('N/A');
-    }
-  };
+  const getTypeLabel = (type: number | null) =>
+    appointmentTypes.find(at => at.id === type)?.name ?? t('N/A');
 
   return (
     <TableRow ref={setNodeRef} style={style}>
@@ -266,7 +270,7 @@ function SortableRow({
   );
 }
 
-export default function Index({ appointments: initialItems, horses, teachers }: Props) {
+export default function Index({ appointments: initialItems, horses, teachers, appointmentTypes }: Props) {
   const { t, locale } = useTranslation();
   const [localItems, setLocalItems] = useState(initialItems);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -275,11 +279,30 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
   const [itemToDelete, setItemToDelete] = useState<Appointment | null>(null);
   const [showActive, setShowActive] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFromMonth, setShowFromMonth] = useState(true);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+
+  const monthStart = startOfMonth(new Date());
+
+  const DAY_KEYS = ['day_sunday', 'day_monday', 'day_tuesday', 'day_wednesday', 'day_thursday', 'day_friday', 'day_saturday'] as const;
 
   const filteredItems = localItems.filter(item => {
-    const matchesStatus = item.is_active === showActive;
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+    if (item.is_active !== showActive) return false;
+    if (!item.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+
+    if (showFromMonth) {
+      // exclude appointments whose valid_to ended before this month
+      if (item.valid_to && new Date(item.valid_to) < monthStart) return false;
+    }
+
+    if (filterDate) {
+      const dayKey = DAY_KEYS[filterDate.getDay()];
+      if (!(item as any)[dayKey]) return false;
+      if (item.valid_from && new Date(item.valid_from) > filterDate) return false;
+      if (item.valid_to   && new Date(item.valid_to)   < filterDate) return false;
+    }
+
+    return true;
   });
 
   const getLocale = (l: string) => {
@@ -464,8 +487,8 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
             <div className="p-6 text-gray-900 dark:text-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">{t('Appointment List')}</h3>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-64">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative w-52">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder={t('Search appointments...')}
@@ -474,10 +497,69 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                       className="pl-9"
                     />
                   </div>
+
+                  {/* Date picker filter */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={filterDate ? 'default' : 'outline'}
+                        size="sm"
+                        className={cn('gap-1.5', !filterDate && 'text-muted-foreground')}
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                        {filterDate
+                          ? format(filterDate, 'd. M. yyyy', { locale: currentLocale })
+                          : t('Filter by date')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <CalendarComponent
+                        mode="single"
+                        selected={filterDate}
+                        onSelect={setFilterDate}
+                        locale={currentLocale}
+                      />
+                      {filterDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-muted-foreground"
+                            onClick={() => setFilterDate(undefined)}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            {t('Clear date')}
+                          </Button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* From current month switch */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="relative inline-flex items-center">
-                        <Switch 
+                        <Switch
+                          checked={showFromMonth}
+                          onCheckedChange={setShowFromMonth}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                        <CalendarIcon className={cn(
+                          "pointer-events-none absolute right-1 h-3 w-3 text-white transition-opacity duration-200",
+                          showFromMonth ? "opacity-100" : "opacity-0"
+                        )} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('Show appointments valid from current month onwards')}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Active/inactive switch */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative inline-flex items-center">
+                        <Switch
                           checked={showActive}
                           onCheckedChange={setShowActive}
                           className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
@@ -496,6 +578,7 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                       {t('Show active/inactive appointments')}
                     </TooltipContent>
                   </Tooltip>
+
                   <Button onClick={openAddDialog}>
                     <Plus className="mr-2 h-4 w-4" /> {t('Add Appointment')}
                   </Button>
@@ -542,6 +625,7 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                               item={item}
                               horses={horses}
                               teachers={teachers}
+                              appointmentTypes={appointmentTypes}
                               onEdit={openEditDialog}
                               onDelete={handleDelete}
                             />
@@ -717,18 +801,21 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                   <Label htmlFor="type">{t('Type')}</Label>
                   <select
                     id="type"
-                    value={data.type || 1}
-                    onChange={(e) => setData('type', parseInt(e.target.value))}
+                    value={data.type || ''}
+                    onChange={(e) => setData('type', e.target.value ? parseInt(e.target.value) : null)}
                     className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <option value={1}>{t('Full appointment')}</option>
-                    <option value={2}>{t('Half appointment')}</option>
+                    <option value="">{t('N/A')}</option>
+                    {appointmentTypes.map(at => (
+                      <option key={at.id} value={at.id}>{at.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               {/* Row 5: Horses + Teachers — side by side */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className={`grid gap-4 ${(appointmentTypes.find(at => at.id === data.type)?.horses_selectable ?? true) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {(appointmentTypes.find(at => at.id === data.type)?.horses_selectable ?? true) && (
                 <div className="grid gap-1.5">
                   <div className="flex items-center justify-between">
                     <Label>{t('Horses')}</Label>
@@ -763,6 +850,7 @@ export default function Index({ appointments: initialItems, horses, teachers }: 
                       : `${data.horse_ids.length} / ${horses.length} ${t('selected')}`}
                   </p>
                 </div>
+                )}
 
                 <div className="grid gap-1.5">
                   <Label>{t('Teachers')}</Label>

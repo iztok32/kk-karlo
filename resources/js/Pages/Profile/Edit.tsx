@@ -5,10 +5,11 @@ import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import UpdateProfileAvatar from './Partials/UpdateProfileAvatar';
 import CouponsTab from './Partials/CouponsTab';
+import AppointmentTypesTab from './Partials/AppointmentTypesTab';
 import { useTranslation } from "@/lib/i18n";
 import { Card, CardContent } from '@/Components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
-import { User, Lock, AlertTriangle, Ticket } from 'lucide-react';
+import { User, Lock, AlertTriangle, CalendarDays, Ticket } from 'lucide-react';
 import { useMemo } from 'react';
 
 interface Permissions {
@@ -33,15 +34,23 @@ interface CouponRecord {
     created_at: string;
 }
 
+interface AppointmentType {
+    id: number;
+    name: string;
+    horses_selectable: boolean;
+}
+
 interface Props {
     mustVerifyEmail: boolean;
     status?: string;
     permissions: Permissions;
     couponBalances: CouponBalance[];
     couponHistory: CouponRecord[];
+    allAppointmentTypes: AppointmentType[];
+    assignedTypeIds: number[];
 }
 
-export default function Edit({ mustVerifyEmail, status, permissions, couponBalances, couponHistory }: Props) {
+export default function Edit({ mustVerifyEmail, status, permissions, couponBalances, couponHistory, allAppointmentTypes, assignedTypeIds }: Props) {
     const { t } = useTranslation();
 
     // Determine which tabs should be visible
@@ -55,6 +64,9 @@ export default function Edit({ mustVerifyEmail, status, permissions, couponBalan
 
         // Coupons tab: always visible (2nd position)
         tabs.push('coupons');
+
+        // Appointment types tab: always visible
+        tabs.push('appointment-types');
 
         // Password tab: always visible
         tabs.push('password');
@@ -70,10 +82,10 @@ export default function Edit({ mustVerifyEmail, status, permissions, couponBalan
     // Default tab is first visible tab
     const defaultTab = visibleTabs[0] || 'coupons';
 
-    // Calculate grid columns based on number of visible tabs
     const gridCols = visibleTabs.length === 1 ? 'grid-cols-1' :
                      visibleTabs.length === 2 ? 'grid-cols-2' :
-                     visibleTabs.length === 3 ? 'grid-cols-3' : 'grid-cols-4';
+                     visibleTabs.length === 3 ? 'grid-cols-3' :
+                     visibleTabs.length === 4 ? 'grid-cols-4' : 'grid-cols-5';
 
     return (
         <AuthenticatedLayout
@@ -99,6 +111,10 @@ export default function Edit({ mustVerifyEmail, status, permissions, couponBalan
                                 <TabsTrigger value="coupons" className="gap-2">
                                     <Ticket className="h-4 w-4" />
                                     {t('My Coupons')}
+                                </TabsTrigger>
+                                <TabsTrigger value="appointment-types" className="gap-2">
+                                    <CalendarDays className="h-4 w-4" />
+                                    {t('Appointment Types')}
                                 </TabsTrigger>
                                 <TabsTrigger value="password" className="gap-2">
                                     <Lock className="h-4 w-4" />
@@ -144,6 +160,13 @@ export default function Edit({ mustVerifyEmail, status, permissions, couponBalan
                                 <CouponsTab
                                     couponBalances={couponBalances}
                                     couponHistory={couponHistory}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="appointment-types" className="mt-6">
+                                <AppointmentTypesTab
+                                    allAppointmentTypes={allAppointmentTypes}
+                                    assignedTypeIds={assignedTypeIds}
                                 />
                             </TabsContent>
 

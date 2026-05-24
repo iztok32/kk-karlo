@@ -122,12 +122,15 @@ export default function AuthenticatedLayout({
                         {hasCoupons && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <button className="relative flex items-center justify-center w-9 h-9 rounded-md hover:bg-muted transition-colors">
+                                    <Link
+                                        href="/purchase"
+                                        className="relative flex items-center justify-center w-9 h-9 rounded-md hover:bg-muted transition-colors"
+                                    >
                                         <BadgeEuro className="w-5 h-5" />
                                         <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[1.1rem] h-[1.1rem] rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none px-0.5">
                                             {totalCoupons}
                                         </span>
-                                    </button>
+                                    </Link>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" align="end" className="space-y-1">
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">

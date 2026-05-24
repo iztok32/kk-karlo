@@ -20,18 +20,21 @@ import { AlertCircle, Trash2, User } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { format } from 'date-fns';
 import type { Locale } from 'date-fns';
-import { Appointment, Reservation, HorseItem, UserItem, ReservationLimits, formatTime } from '../types';
+import { Link } from '@inertiajs/react';
+import { Appointment, AppointmentTypeItem, Reservation, HorseItem, UserItem, ReservationLimits, formatTime } from '../types';
 
 interface ReservationDialogProps {
   open: boolean;
   slot: { appointment: Appointment; date: Date } | null;
   slotReservations: Reservation[];
+  appointmentTypes: AppointmentTypeItem[];
   horses: HorseItem[];
   users: UserItem[];
   authUserId: number;
   canReserveForOthers: boolean;
   reservationLimits: ReservationLimits;
   dateFnsLocale: Locale;
+  couponBalances: Record<number, Record<number, number>>;
   formData: { appointment_id: number; horse_id: string; user_id: string; reservation_date: string; notes: string };
   errors: Partial<Record<string, string>>;
   processing: boolean;
@@ -41,7 +44,7 @@ interface ReservationDialogProps {
   onCancel: (reservation: Reservation) => void;
 }
 
-function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (key: string, params?: Record<string, unknown>) => string): string | null {
+function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (key: string, replacements?: Record<string, string>) => string): string | null {
   if (limits.isAdmin) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -50,10 +53,10 @@ function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (ke
   const daysAhead = Math.round((target.getTime() - today.getTime()) / 86400000);
   if (daysAhead < limits.minDaysInAdvance) {
     if (limits.minDaysInAdvance === 0) return t('Reservations cannot be made for past dates.');
-    return t('You can only make a reservation at least :count days in advance.', { count: limits.minDaysInAdvance });
+    return t('You can only make a reservation at least :count days in advance.', { count: String(limits.minDaysInAdvance) });
   }
   if (limits.maxDaysInAdvance !== null && daysAhead > limits.maxDaysInAdvance) {
-    return t('You can only make a reservation up to :count days in advance.', { count: limits.maxDaysInAdvance });
+    return t('You can only make a reservation up to :count days in advance.', { count: String(limits.maxDaysInAdvance) });
   }
   return null;
 }
@@ -62,6 +65,7 @@ export default function ReservationDialog({
   open,
   slot,
   slotReservations,
+  appointmentTypes,
   horses,
   users,
   authUserId,
@@ -71,6 +75,7 @@ export default function ReservationDialog({
   formData,
   errors,
   processing,
+  couponBalances,
   onClose,
   onSubmit,
   onFieldChange,
@@ -78,6 +83,14 @@ export default function ReservationDialog({
 }: ReservationDialogProps) {
   const { t } = useTranslation();
   const restriction = slot ? getDateRestrictionMessage(slot.date, reservationLimits, t) : null;
+  const apptType = slot ? appointmentTypes.find(at => at.id === slot.appointment.type) : null;
+  const horsesSelectable = apptType?.horses_selectable ?? true;
+
+  const requiredCouponTypeId = apptType?.coupon_type_id ?? null;
+  const targetUserId = formData.user_id ? Number(formData.user_id) : null;
+  const couponInsufficient = requiredCouponTypeId !== null && targetUserId !== null
+    ? !((couponBalances[targetUserId]?.[requiredCouponTypeId] ?? 0) >= 1)
+    : false;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -124,6 +137,23 @@ export default function ReservationDialog({
                 <span>{errors.reservation_date}</span>
               </div>
             )}
+            {errors.coupon && (
+              <div className="flex items-start gap-2 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 text-red-700 dark:text-red-300">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errors.coupon}</span>
+              </div>
+            )}
+            {couponInsufficient && !errors.coupon && (
+              <div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-amber-800 dark:text-amber-300">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  {t('Insufficient coupon balance for this appointment type.')}{' '}
+                  <Link href={route('coupons.index')} className="underline font-medium" onClick={onClose}>
+                    {t('Purchase coupons')}
+                  </Link>
+                </span>
+              </div>
+            )}
             {slot.appointment.capacity && (
               <div className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-2">
                 <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -154,26 +184,28 @@ export default function ReservationDialog({
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <Label>{t('Horse')}</Label>
-              <Select value={formData.horse_id} onValueChange={(v) => onFieldChange('horse_id', v)}>
-                <SelectTrigger className={errors.horse_id ? 'border-destructive' : ''}>
-                  <SelectValue placeholder={t('Select horse...')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {horses.map((h) => {
-                    const isBooked = slotReservations.some((r) => r.horse_id === h.id);
-                    return (
-                      <SelectItem key={h.id} value={String(h.id)} disabled={isBooked}>
-                        <span className={isBooked ? 'text-muted-foreground line-through' : ''}>{h.name}</span>
-                        {isBooked && <span className="ml-2 text-xs text-red-500">{t('booked')}</span>}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {errors.horse_id && <p className="text-xs text-destructive">{errors.horse_id}</p>}
-            </div>
+            {horsesSelectable && (
+              <div className="space-y-1.5">
+                <Label>{t('Horse')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
+                <Select value={formData.horse_id} onValueChange={(v) => onFieldChange('horse_id', v)}>
+                  <SelectTrigger className={errors.horse_id ? 'border-destructive' : ''}>
+                    <SelectValue placeholder={t('Select horse...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {horses.map((h) => {
+                      const isBooked = slotReservations.some((r) => r.horse_id === h.id);
+                      return (
+                        <SelectItem key={h.id} value={String(h.id)} disabled={isBooked}>
+                          <span className={isBooked ? 'text-muted-foreground line-through' : ''}>{h.name}</span>
+                          {isBooked && <span className="ml-2 text-xs text-red-500">{t('booked')}</span>}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {errors.horse_id && <p className="text-xs text-destructive">{errors.horse_id}</p>}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>{t('Note')} ({t('optional')})</Label>
@@ -198,7 +230,7 @@ export default function ReservationDialog({
               <Button type="button" variant="outline" onClick={onClose} disabled={processing}>
                 {t('Cancel')}
               </Button>
-              <Button type="submit" disabled={processing || !formData.horse_id}>
+              <Button type="submit" disabled={processing}>
                 {processing ? t('Saving...') : t('Reserve')}
               </Button>
             </DialogFooter>
@@ -214,10 +246,12 @@ export default function ReservationDialog({
               {slotReservations.map((r) => (
                 <div key={r.id} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-1.5">
                   <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <span>🐴</span>
-                      <span className="font-medium">{r.horse.name}</span>
-                    </span>
+                    {r.horse && (
+                      <span className="flex items-center gap-1">
+                        <span>🐴</span>
+                        <span className="font-medium">{r.horse.name}</span>
+                      </span>
+                    )}
                     {canReserveForOthers && (
                       <span className="flex items-center gap-1 text-muted-foreground">
                         <User className="w-3.5 h-3.5" />

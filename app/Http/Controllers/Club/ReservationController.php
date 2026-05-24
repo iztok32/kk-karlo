@@ -30,11 +30,19 @@ class ReservationController extends Controller
             $endDate   = $now->copy()->endOfMonth()->format('Y-m-d');
         }
 
+        $allowedTypeIds = auth()->user()->allowedAppointmentTypeIds();
+
         $appointments = Appointment::with('teachers:id,name')
             ->where('is_active', true)
+            ->when(!empty($allowedTypeIds), fn($q) => $q->whereIn('type', $allowedTypeIds))
             ->orderBy('start_time')
             ->orderBy('name')
             ->get();
+
+        $appointmentTypes = \App\Models\AppointmentType::whereNull('deleted_at')
+            ->where('is_active', true)
+            ->orderBy('display_order')
+            ->get(['id', 'name', 'horses_selectable', 'coupon_type_id']);
 
         $reservations = Reservation::with(['user:id,name', 'horse:id,name', 'createdBy:id,name'])
             ->whereBetween('reservation_date', [$startDate, $endDate])
@@ -60,16 +68,29 @@ class ReservationController extends Controller
             ->limit(20)
             ->get();
 
-        $isAdmin = $this->isAdmin();
-        $isTeacher = auth()->user()->hasRole('ucitelj');
+        // Coupon balances: { userId: { couponTypeId: balance } }
+        $couponBalanceRows = \DB::table('coupons')
+            ->selectRaw("user_id, coupon_type_id, SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) as balance")
+            ->whereNull('deleted_at')
+            ->when(! $canReserveForOthers, fn ($q) => $q->where('user_id', auth()->id()))
+            ->groupBy('user_id', 'coupon_type_id')
+            ->havingRaw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) > 0")
+            ->get();
 
-        // Appointment IDs where current user is assigned as teacher
-        $myTeacherAppointmentIds = $isTeacher
-            ? \DB::table('appointment_teacher')
-                ->where('user_id', auth()->id())
-                ->pluck('appointment_id')
-                ->toArray()
-            : [];
+        $couponBalances = [];
+        foreach ($couponBalanceRows as $row) {
+            $couponBalances[$row->user_id][$row->coupon_type_id] = (int) $row->balance;
+        }
+
+        $isAdmin = $this->isAdmin();
+
+        // Teacher status derived from pivot, not role — admins can also be teachers
+        $myTeacherAppointmentIds = \DB::table('appointment_teacher')
+            ->where('user_id', auth()->id())
+            ->pluck('appointment_id')
+            ->toArray();
+
+        $isTeacher = ! empty($myTeacherAppointmentIds);
 
         // Enabled notification channels
         $enabledChannels = array_filter([
@@ -89,6 +110,7 @@ class ReservationController extends Controller
 
         return Inertia::render('Club/Reservations/Index', [
             'appointments'             => $appointments,
+            'appointmentTypes'         => $appointmentTypes,
             'reservations'             => $reservations,
             'horses'                   => $horses,
             'users'                    => $users,
@@ -109,6 +131,7 @@ class ReservationController extends Controller
             'myTeacherAppointmentIds'  => $myTeacherAppointmentIds,
             'enabledChannels'          => array_values($enabledChannels),
             'holidays'                 => $holidays->values(),
+            'couponBalances'           => $couponBalances,
         ]);
     }
 
@@ -120,7 +143,7 @@ class ReservationController extends Controller
 
         $rules = [
             'appointment_id'   => 'required|exists:appointments,id',
-            'horse_id'         => 'required|exists:horses,id',
+            'horse_id'         => 'nullable|exists:horses,id',
             'reservation_date' => 'required|date|after_or_equal:today',
             'notes'            => 'nullable|string|max:500',
         ];
@@ -193,25 +216,34 @@ class ReservationController extends Controller
             return back()->withErrors(['appointment_id' => __('User already has a reservation for this appointment on this date.')]);
         }
 
+        // Check coupon balance for the target user if appointment type requires a coupon
+        $appointmentType = \App\Models\AppointmentType::find($appointment->type);
+        $requiredCouponTypeId = $appointmentType?->coupon_type_id;
+
+        if ($requiredCouponTypeId) {
+            $balance = \Illuminate\Support\Facades\DB::table('coupons')
+                ->selectRaw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) as balance")
+                ->where('user_id', $validated['user_id'])
+                ->where('coupon_type_id', $requiredCouponTypeId)
+                ->whereNull('deleted_at')
+                ->value('balance');
+
+            if (! $balance || $balance < 1) {
+                return back()->withErrors(['coupon' => __('The user does not have a required coupon for this appointment type.')]);
+            }
+        }
+
         $validated['created_by_user_id'] = auth()->id();
         $reservation = Reservation::create($validated);
 
-        // Auto-deduct a coupon if the user has a positive balance of any type
-        $balanceRecord = \Illuminate\Support\Facades\DB::table('coupons')
-            ->select('coupon_type_id', \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) as balance"))
-            ->where('user_id', $validated['user_id'])
-            ->whereNull('deleted_at')
-            ->groupBy('coupon_type_id')
-            ->havingRaw("SUM(CASE WHEN transaction_type = 'purchase' THEN quantity ELSE -quantity END) > 0")
-            ->first();
-
-        if ($balanceRecord) {
+        // Deduct coupon if required
+        if ($requiredCouponTypeId) {
             Coupon::create([
-                'user_id' => $validated['user_id'],
-                'coupon_type_id' => $balanceRecord->coupon_type_id,
-                'quantity' => 1,
+                'user_id'          => $validated['user_id'],
+                'coupon_type_id'   => $requiredCouponTypeId,
+                'quantity'         => 1,
                 'transaction_type' => 'usage',
-                'reservation_id' => $reservation->id,
+                'reservation_id'   => $reservation->id,
             ]);
         }
 

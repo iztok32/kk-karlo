@@ -25,6 +25,7 @@ import type { Locale } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   Appointment,
+  AppointmentTypeItem,
   Reservation,
   ReservationWithAppointment,
   HorseItem,
@@ -46,6 +47,7 @@ import LateCancellationDialog from './Partials/LateCancellationDialog';
 
 interface Props {
   appointments: Appointment[];
+  appointmentTypes: AppointmentTypeItem[];
   reservations: Reservation[];
   holidays: Holiday[];
   horses: HorseItem[];
@@ -61,6 +63,7 @@ interface Props {
   myTeacherAppointmentIds: number[];
   enabledChannels: ('portal' | 'email' | 'sms')[];
   defaultAdmins: Teacher[];
+  couponBalances: Record<number, Record<number, number>>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,6 +91,7 @@ function getDateRange(date: Date, viewType: string): { start: string; end: strin
 
 export default function Index({
   appointments,
+  appointmentTypes = [],
   reservations,
   holidays = [],
   horses,
@@ -102,6 +106,7 @@ export default function Index({
   myTeacherAppointmentIds = [],
   enabledChannels = [],
   defaultAdmins = [],
+  couponBalances = {},
 }: Props) {
   const { t, locale } = useTranslation();
   const dateFnsLocale = LOCALE_MAP[locale] ?? sl;
@@ -340,6 +345,7 @@ export default function Index({
             anchorDate={anchorDate}
             calendarDays={calendarDays}
             appointments={appointments}
+            appointmentTypes={appointmentTypes}
             reservations={reservations}
             holidays={holidays}
             authUserId={authUserId}
@@ -368,12 +374,14 @@ export default function Index({
         open={!!selectedSlot}
         slot={selectedSlot}
         slotReservations={selectedSlotReservations}
+        appointmentTypes={appointmentTypes}
         horses={horses}
         users={users}
         authUserId={authUserId}
         canReserveForOthers={canReserveForOthers}
         reservationLimits={reservationLimits}
         dateFnsLocale={dateFnsLocale}
+        couponBalances={couponBalances}
         formData={data}
         errors={errors}
         processing={processing}

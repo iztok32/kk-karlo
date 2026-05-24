@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/request-appointment-type', [ProfileController::class, 'requestAppointmentType'])->name('profile.request-appointment-type');
     // Horses routes with permission middleware
     Route::middleware('permission:horses.view')->group(function () {
         Route::get('horses', [\App\Http\Controllers\Club\HorseController::class, 'index'])->name('horses.index');
@@ -96,9 +97,28 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:appointments.delete')->group(function () {
         Route::delete('appointment/{appointment}', [\App\Http\Controllers\Club\AppointmentController::class, 'destroy'])->name('appointment.destroy');
     });
+
+    // Appointment Types routes
+    Route::middleware('permission:appointments.view')->group(function () {
+        Route::get('appointment-types', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'index'])->name('appointment-types.index');
+    });
+    Route::middleware('permission:appointments.create')->group(function () {
+        Route::post('appointment-types', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'store'])->name('appointment-types.store');
+    });
+    Route::middleware('permission:appointments.edit')->group(function () {
+        Route::put('appointment-types/{appointmentType}', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'update'])->name('appointment-types.update');
+        Route::patch('appointment-types/{appointmentType}', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'update']);
+        Route::post('appointment-types/reorder', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'reorder'])->name('appointment-types.reorder');
+        Route::post('appointment-types/{id}/restore', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'restore'])->name('appointment-types.restore');
+    });
+    Route::middleware('permission:appointments.delete')->group(function () {
+        Route::delete('appointment-types/{appointmentType}', [\App\Http\Controllers\Club\AppointmentTypeController::class, 'destroy'])->name('appointment-types.destroy');
+    });
+
     Route::resource('reservations', \App\Http\Controllers\Club\ReservationController::class)->only(['index', 'store', 'destroy']);
     Route::post('reservations/{reservation}/notify-late-cancellation', [\App\Http\Controllers\Club\ReservationController::class, 'notifyLateCancellation'])->name('reservations.notify-late-cancellation');
     Route::resource('coupons', \App\Http\Controllers\Club\CouponController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('coupon-types', \App\Http\Controllers\Club\CouponTypeController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::middleware('permission:statistics.view')->group(function () {
         Route::get('statistics', [\App\Http\Controllers\Club\StatisticsController::class, 'index'])->name('statistics.index');
     });

@@ -25,7 +25,9 @@ interface User {
     email: string;
     gsm_number?: string;
     is_active: boolean;
+    is_teacher?: boolean;
     roles: string[];
+    appointment_type_ids?: number[];
     // Profile fields
     address?: string;
     postal_code?: string;
@@ -51,16 +53,32 @@ interface Role {
     slug: string;
 }
 
+interface AppointmentTypeItem {
+    id: number;
+    name: string;
+    horses_selectable: boolean;
+}
+
 interface Props {
     user?: User;
     roles: Role[];
     horsemanTypes: HorsemanType[];
+    appointmentTypes: AppointmentTypeItem[];
     onClose: () => void;
 }
 
-export default function UserForm({ user, roles, horsemanTypes, onClose }: Props) {
+export default function UserForm({ user, roles, horsemanTypes, appointmentTypes, onClose }: Props) {
     const { t } = useTranslation();
-    const { data, setData, post, put, errors, processing, reset } = useForm({
+    const { data, setData, post, put, errors, processing, reset } = useForm<{
+        name: string; email: string; gsm_number: string; is_active: boolean;
+        role_id: number | null; address: string; postal_code: string; city: string;
+        date_of_birth: string; username: string; home_phone: string; work_phone: string;
+        fax: string; gsm_number_public: boolean; home_phone_public: boolean;
+        work_phone_public: boolean; fax_public: boolean; horseman_type_id: number | '';
+        is_member: boolean; membership_paid: boolean; notify_free_slots: boolean;
+        is_teacher: boolean;
+        appointment_type_ids: number[];
+    }>({
         name: user?.name || '',
         email: user?.email || '',
         gsm_number: user?.gsm_number || '',
@@ -83,6 +101,8 @@ export default function UserForm({ user, roles, horsemanTypes, onClose }: Props)
         is_member: user?.is_member || false,
         membership_paid: user?.membership_paid || false,
         notify_free_slots: user?.notify_free_slots ?? true,
+        is_teacher: user?.is_teacher || false,
+        appointment_type_ids: user?.appointment_type_ids ?? [],
     });
 
     // Load user role on edit
@@ -118,7 +138,7 @@ export default function UserForm({ user, roles, horsemanTypes, onClose }: Props)
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-            <Accordion type="multiple" defaultValue={["basic", "profile", "phones", "membership"]} className="w-full">
+            <Accordion type="multiple" defaultValue={["basic", "profile", "phones", "membership", "appointment-types"]} className="w-full">
                 {/* Basic Information */}
                 <AccordionItem value="basic">
                     <AccordionTrigger className="text-base font-semibold">
@@ -463,6 +483,54 @@ export default function UserForm({ user, roles, horsemanTypes, onClose }: Props)
                                 {t('Notify About Free Slots')}
                             </Label>
                         </div>
+
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="is_teacher"
+                                checked={data.is_teacher}
+                                onCheckedChange={(checked) => setData('is_teacher', checked as boolean)}
+                            />
+                            <Label htmlFor="is_teacher" className="text-sm font-normal cursor-pointer">
+                                {t('Teacher')}
+                            </Label>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* Appointment Types */}
+                <AccordionItem value="appointment-types">
+                    <AccordionTrigger className="text-base font-semibold">
+                        {t('Appointment Types')}
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-4">
+                        <p className="text-xs text-muted-foreground">
+                            {t('If no types are selected, the user has access to all appointment types.')}
+                        </p>
+                        {appointmentTypes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground italic">{t('No appointment types available.')}</p>
+                        ) : (
+                            appointmentTypes.map(at => (
+                                <div key={at.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`at-${at.id}`}
+                                        checked={data.appointment_type_ids.includes(at.id)}
+                                        onCheckedChange={(checked) => {
+                                            setData('appointment_type_ids',
+                                                checked
+                                                    ? [...data.appointment_type_ids, at.id]
+                                                    : data.appointment_type_ids.filter(id => id !== at.id)
+                                            );
+                                        }}
+                                    />
+                                    <Label htmlFor={`at-${at.id}`} className="text-sm font-normal cursor-pointer">
+                                        {at.name}
+                                        {!at.horses_selectable && (
+                                            <span className="ml-1.5 text-xs text-muted-foreground">({t('no horses')})</span>
+                                        )}
+                                    </Label>
+                                </div>
+                            ))
+                        )}
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>

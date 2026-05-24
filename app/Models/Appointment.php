@@ -39,8 +39,8 @@ class Appointment extends Model
     }
 
     protected $casts = [
-        'valid_from' => 'date',
-        'valid_to' => 'date',
+        'valid_from' => 'date:Y-m-d',
+        'valid_to' => 'date:Y-m-d',
         'day_monday' => 'boolean',
         'day_tuesday' => 'boolean',
         'day_wednesday' => 'boolean',

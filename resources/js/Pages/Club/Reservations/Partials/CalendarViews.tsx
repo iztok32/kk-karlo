@@ -13,15 +13,17 @@ import type { Locale } from 'date-fns';
 import { Plus, Trash2, Clock, Info } from 'lucide-react';
 import {
   Appointment,
+  AppointmentTypeItem,
   Holiday,
   Reservation,
   ReservationLimits,
+  TYPE_COLOR_PALETTE,
   formatTime,
   appointmentOnDate,
+  getTypeColorEntry,
 } from '../types';
 import SlotChip from './SlotChip';
 
-// Maps app locale → ISO 3166-1 alpha-2 country code
 const LOCALE_COUNTRY: Record<string, string> = {
   sl: 'SI',
   hr: 'HR',
@@ -35,6 +37,7 @@ interface CalendarViewsProps {
   anchorDate: Date;
   calendarDays: Date[];
   appointments: Appointment[];
+  appointmentTypes: AppointmentTypeItem[];
   reservations: Reservation[];
   holidays: Holiday[];
   authUserId: number;
@@ -49,7 +52,7 @@ interface CalendarViewsProps {
   onNotify: (appointment: Appointment, date: Date, channel: 'portal' | 'email' | 'sms') => void;
 }
 
-function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (key: string, params?: Record<string, unknown>) => string): string | null {
+function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (key: string, replacements?: Record<string, string>) => string): string | null {
   if (limits.isAdmin) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -58,10 +61,10 @@ function getDateRestrictionMessage(date: Date, limits: ReservationLimits, t: (ke
   const daysAhead = Math.round((target.getTime() - today.getTime()) / 86400000);
   if (daysAhead < limits.minDaysInAdvance) {
     if (limits.minDaysInAdvance === 0) return t('Reservations cannot be made for past dates.');
-    return t('You can only make a reservation at least :count days in advance.', { count: limits.minDaysInAdvance });
+    return t('You can only make a reservation at least :count days in advance.', { count: String(limits.minDaysInAdvance) });
   }
   if (limits.maxDaysInAdvance !== null && daysAhead > limits.maxDaysInAdvance) {
-    return t('You can only make a reservation up to :count days in advance.', { count: limits.maxDaysInAdvance });
+    return t('You can only make a reservation up to :count days in advance.', { count: String(limits.maxDaysInAdvance) });
   }
   return null;
 }
@@ -73,6 +76,7 @@ export default function CalendarViews({
   anchorDate,
   calendarDays,
   appointments,
+  appointmentTypes,
   reservations,
   holidays,
   authUserId,
@@ -102,6 +106,7 @@ export default function CalendarViews({
     );
   }
 
+  /** All views: only valid appointments for this day */
   function getAppointmentsForDay(date: Date): Appointment[] {
     return appointments.filter((a) => appointmentOnDate(a, date));
   }
@@ -122,6 +127,7 @@ export default function CalendarViews({
     const userHasRes = slotRes.some((r) => r.user_id === authUserId);
     const isTeacher = myTeacherAppointmentIds.includes(appt.id);
     const isClickable = !restriction && !(isFull && !userHasRes);
+    const colors = getTypeColorEntry(appt.type, appointmentTypes);
 
     const timeStr = appt.start_time
       ? `${formatTime(appt.start_time)}${appt.end_time ? `–${formatTime(appt.end_time)}` : ''}`
@@ -136,12 +142,13 @@ export default function CalendarViews({
             type="button"
             onClick={isClickable ? () => onOpenSlot(appt, date) : undefined}
             className={cn(
-              'w-full text-left text-xs leading-snug px-0.5 py-px rounded',
+              'w-full text-left text-xs leading-snug px-0.5 py-px rounded flex items-center gap-1',
               isClickable ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : 'cursor-default',
               userHasRes ? 'font-semibold' : '',
               isFull && !userHasRes ? 'opacity-50' : '',
             )}
           >
+            <span className={cn('inline-block w-1.5 h-1.5 rounded-full shrink-0 mt-px', colors.dot)} />
             {timeStr} {freeLabel}
             {userHasRes && <span className="ml-0.5">🐴</span>}
             {isTeacher && <span className="ml-0.5 opacity-50 text-[10px]">★</span>}
@@ -162,7 +169,7 @@ export default function CalendarViews({
               : `${count} ${t('reservations')}`}
           </p>
           {slotRes.map((r) => (
-            <p key={r.id} className="text-xs">🐴 {r.horse.name} – {r.user.name}</p>
+            <p key={r.id} className="text-xs">{r.horse ? `🐴 ${r.horse.name} – ` : ''}{r.user.name}</p>
           ))}
           {userHasRes && <p className="text-xs font-medium text-green-400 mt-0.5">✓ {t('You have a reservation')}</p>}
           {isTeacher && <p className="text-xs opacity-70">★ {t('Your appointment')}</p>}
@@ -172,7 +179,7 @@ export default function CalendarViews({
     );
   }
 
-  // ── Full slot row (week view) ────────────────────────────────────────────────
+  // ── Slot row (month compact / week full) ────────────────────────────────────
   function renderDaySlots(date: Date, compact: boolean) {
     const dayAppts = getAppointmentsForDay(date);
     if (dayAppts.length === 0) return null;
@@ -192,6 +199,7 @@ export default function CalendarViews({
           <SlotChip
             key={appt.id}
             appointment={appt}
+            appointmentTypes={appointmentTypes}
             reservations={getSlotReservations(appt.id, date)}
             authUserId={authUserId}
             onClick={() => restriction ? undefined : onOpenSlot(appt, date)}
@@ -279,25 +287,23 @@ export default function CalendarViews({
         <div className="shrink-0 border-t border-border px-4 py-2.5">
           <p className="text-xs font-semibold mb-1.5">{t('Legend')}</p>
           <div className="flex flex-wrap gap-x-6 gap-y-1.5 items-center text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center whitespace-nowrap px-1.5 h-5 rounded-sm border border-border bg-muted/60 text-[10px]">
-                17:00–18:00 (3)
-              </span>
-              <span>termin — v oklepaju <strong className="text-foreground">prosta mesta</strong></span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center whitespace-nowrap px-1.5 h-5 rounded-sm border border-red-200 bg-red-100 text-red-700 text-[10px] opacity-80">
-                17:00 POLNO
-              </span>
-              <span>ni prostih mest</span>
-            </span>
+            {/* Appointment type colors */}
+            {appointmentTypes.map((at, idx) => {
+              const palette = TYPE_COLOR_PALETTE[idx % TYPE_COLOR_PALETTE.length];
+              return (
+                <span key={at.id} className="flex items-center gap-1.5">
+                  <span className={cn('inline-block w-2.5 h-2.5 rounded-full shrink-0', palette.dot)} />
+                  {at.name}
+                </span>
+              );
+            })}
             <span className="flex items-center gap-1.5">
               <span>🐴</span>
-              <span>imam rezervacijo</span>
+              <span>{t('I have a reservation')}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span>⭐</span>
-              <span>državni praznik</span>
+              <span>{t('Public holiday')}</span>
             </span>
           </div>
         </div>
@@ -355,114 +361,127 @@ export default function CalendarViews({
         const capacity = appt.capacity;
         const isFull = capacity !== null && count >= capacity;
         const userReservation = slotRes.find((r) => r.user_id === authUserId);
+        const colors = getTypeColorEntry(appt.type, appointmentTypes);
+        const typeName = appointmentTypes.find(at => at.id === appt.type)?.name;
 
         return (
-          <div key={appt.id} className="border border-border rounded-xl p-4 bg-card shadow-sm">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div>
-                <h3 className="font-semibold text-base">{appt.name}</h3>
-                {appt.start_time && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    {formatTime(appt.start_time)}
-                    {appt.end_time && ` – ${formatTime(appt.end_time)}`}
-                  </p>
-                )}
-                {appt.teachers.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    <User className="inline w-3 h-3 mr-1 opacity-60" />
-                    {appt.teachers.map(t => t.name).join(', ')}
-                  </p>
-                )}
+          <div key={appt.id} className="border border-border rounded-xl p-4 bg-card shadow-sm overflow-hidden relative">
+            {/* Type color bar on left */}
+            <div className={cn('absolute left-0 top-0 bottom-0 w-1', colors.dot)} />
+            <div className="pl-3">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="font-semibold text-base">{appt.name}</h3>
+                    {typeName && (
+                      <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full border', colors.medium)}>
+                        {typeName}
+                      </span>
+                    )}
+                  </div>
+                  {appt.start_time && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      {formatTime(appt.start_time)}
+                      {appt.end_time && ` – ${formatTime(appt.end_time)}`}
+                    </p>
+                  )}
+                  {appt.teachers.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      <User className="inline w-3 h-3 mr-1 opacity-60" />
+                      {appt.teachers.map(t => t.name).join(', ')}
+                    </p>
+                  )}
+                </div>
+                <span className={cn(
+                  'inline-block px-2.5 py-1 rounded-full text-xs font-semibold',
+                  isFull
+                    ? 'bg-red-100 text-red-700'
+                    : count / (capacity ?? Infinity) >= 0.7
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-green-100 text-green-700',
+                )}>
+                  {isFull ? 'POLNO' : `${count} / ${capacity ?? '∞'}`}
+                </span>
               </div>
-              <span className={cn(
-                'inline-block px-2.5 py-1 rounded-full text-xs font-semibold',
-                isFull
-                  ? 'bg-red-100 text-red-700'
-                  : count / (capacity ?? Infinity) >= 0.7
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'bg-green-100 text-green-700',
-              )}>
-                {isFull ? 'POLNO' : `${count} / ${capacity ?? '∞'}`}
-              </span>
-            </div>
 
-            {slotRes.length > 0 && (
-              <div className="mb-3 space-y-1.5">
-                {slotRes.map((r) => {
-                  const createdAt  = r.created_at  ? parseISO(r.created_at)  : null;
-                  const updatedAt  = r.updated_at  ? parseISO(r.updated_at)  : null;
-                  const wasEdited  = createdAt && updatedAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) > 5000;
-                  const creatorName = r.created_by?.name ?? null;
-                  const fmt = (d: Date) => format(d, 'd. M. yyyy HH:mm');
+              {slotRes.length > 0 && (
+                <div className="mb-3 space-y-1.5">
+                  {slotRes.map((r) => {
+                    const createdAt  = r.created_at  ? parseISO(r.created_at)  : null;
+                    const updatedAt  = r.updated_at  ? parseISO(r.updated_at)  : null;
+                    const wasEdited  = createdAt && updatedAt && Math.abs(updatedAt.getTime() - createdAt.getTime()) > 5000;
+                    const creatorName = r.created_by?.name ?? null;
+                    const fmt = (d: Date) => format(d, 'd. M. yyyy HH:mm');
 
-                  return (
-                    <div key={r.id} className="flex items-center justify-between gap-2 bg-muted/50 rounded-lg px-3 py-1.5 text-sm">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="flex items-center gap-1 shrink-0">
-                          <User className="w-3.5 h-3.5 text-muted-foreground" />
-                          {r.user.name}
-                          {r.user_id === authUserId && <span className="text-xs text-primary font-medium">(jaz)</span>}
-                        </span>
-                        <span className="flex items-center gap-1 text-muted-foreground shrink-0">
-                          <span className="text-xs">🐴</span> {r.horse.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Info tooltip */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                              <Info className="w-3.5 h-3.5" />
+                    return (
+                      <div key={r.id} className="flex items-center justify-between gap-2 bg-muted/50 rounded-lg px-3 py-1.5 text-sm">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="flex items-center gap-1 shrink-0">
+                            <User className="w-3.5 h-3.5 text-muted-foreground" />
+                            {r.user.name}
+                            {r.user_id === authUserId && <span className="text-xs text-primary font-medium">(jaz)</span>}
+                          </span>
+                          {r.horse && (
+                            <span className="flex items-center gap-1 text-muted-foreground shrink-0">
+                              <span className="text-xs">🐴</span> {r.horse.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <Info className="w-3.5 h-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="text-xs space-y-0.5 max-w-[220px]">
+                              {createdAt && (
+                                <p>
+                                  <span className="opacity-60">Oddano:</span>{' '}
+                                  {fmt(createdAt)}
+                                </p>
+                              )}
+                              {creatorName && (
+                                <p>
+                                  <span className="opacity-60">Ustvaril:</span>{' '}
+                                  {creatorName}
+                                  {r.created_by_user_id === r.user_id ? ' (sam)' : ''}
+                                </p>
+                              )}
+                              {!creatorName && !createdAt && (
+                                <p className="opacity-60">Ni podatkov o ustvarjanju.</p>
+                              )}
+                              {wasEdited && updatedAt && (
+                                <p className="text-amber-400">
+                                  <span className="opacity-80">Spremenjena:</span>{' '}
+                                  {fmt(updatedAt)}
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                          {(r.user_id === authUserId || canReserveForOthers) && (
+                            <button onClick={() => onCancel(r)} className="text-red-500 hover:text-red-700 transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" className="text-xs space-y-0.5 max-w-[220px]">
-                            {createdAt && (
-                              <p>
-                                <span className="opacity-60">Oddano:</span>{' '}
-                                {fmt(createdAt)}
-                              </p>
-                            )}
-                            {creatorName && (
-                              <p>
-                                <span className="opacity-60">Ustvaril:</span>{' '}
-                                {creatorName}
-                                {r.created_by_user_id === r.user_id ? ' (sam)' : ''}
-                              </p>
-                            )}
-                            {!creatorName && !createdAt && (
-                              <p className="opacity-60">Ni podatkov o ustvarjanju.</p>
-                            )}
-                            {wasEdited && updatedAt && (
-                              <p className="text-amber-400">
-                                <span className="opacity-80">Spremenjena:</span>{' '}
-                                {fmt(updatedAt)}
-                              </p>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                        {/* Delete button */}
-                        {(r.user_id === authUserId || canReserveForOthers) && (
-                          <button onClick={() => onCancel(r)} className="text-red-500 hover:text-red-700 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
 
-            {!isFull && !userReservation && (
-              <Button size="sm" variant="outline" onClick={() => onOpenSlot(appt, anchorDate)} className="w-full">
-                <Plus className="w-4 h-4 mr-1" />
-                {t('Reserve')}
-              </Button>
-            )}
-            {userReservation && (
-              <p className="text-xs text-green-600 font-medium text-center">✓ {t('You have a reservation')}</p>
-            )}
+              {!isFull && !userReservation && (
+                <Button size="sm" variant="outline" onClick={() => onOpenSlot(appt, anchorDate)} className="w-full">
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t('Reserve')}
+                </Button>
+              )}
+              {userReservation && (
+                <p className="text-xs text-green-600 font-medium text-center">✓ {t('You have a reservation')}</p>
+              )}
+            </div>
           </div>
         );
       })}

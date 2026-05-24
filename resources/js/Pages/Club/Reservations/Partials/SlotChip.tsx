@@ -9,10 +9,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/Components/ui/tooltip';
 import { Bell, Clock, Mail, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Appointment, Reservation, formatTime } from '../types';
+import { Appointment, AppointmentTypeItem, Reservation, formatTime, getTypeColorEntry } from '../types';
 
 interface SlotChipProps {
   appointment: Appointment;
+  appointmentTypes: AppointmentTypeItem[];
   reservations: Reservation[];
   authUserId: number;
   onClick: () => void;
@@ -27,6 +28,7 @@ interface SlotChipProps {
 
 export default function SlotChip({
   appointment,
+  appointmentTypes,
   reservations,
   authUserId,
   onClick,
@@ -45,19 +47,15 @@ export default function SlotChip({
   const userHasReservation = reservations.some((r) => r.user_id === authUserId);
   const isDisabled = disabled || (isFull && !userHasReservation);
 
+  const colors = getTypeColorEntry(appointment.type, appointmentTypes);
+
   const colorClass = disabled
     ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-70'
-    : isTeacherSlot
-    ? isFull
-      ? 'bg-purple-100 text-purple-700 border-purple-300 opacity-80'
-      : isNearFull
-      ? 'bg-purple-100 text-purple-700 border-purple-300'
-      : 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100'
-    : isFull
-    ? 'bg-red-100 text-red-700 border-red-200 opacity-80'
+    : isFull && !userHasReservation
+    ? colors.full
     : isNearFull
-    ? 'bg-amber-100 text-amber-700 border-amber-200'
-    : 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200';
+    ? colors.medium
+    : colors.normal;
 
   const label = capacity !== null ? (isFull ? 'POLNO' : `${count}/${capacity}`) : `${count}`;
 
@@ -73,6 +71,7 @@ export default function SlotChip({
           )}
         >
           <div className="flex items-center gap-1 truncate">
+            <span className={cn('inline-block w-1.5 h-1.5 rounded-full shrink-0', colors.dot)} />
             {appointment.start_time && (
               <span className="font-medium shrink-0">{formatTime(appointment.start_time)}</span>
             )}
@@ -84,7 +83,7 @@ export default function SlotChip({
           {reservations.length > 0 && (
             <div className="flex flex-wrap gap-x-1 mt-0.5">
               {reservations.map((r) => (
-                <span key={r.id} className="truncate opacity-80">🐴 {r.horse.name}</span>
+                <span key={r.id} className="truncate opacity-80">{r.horse ? `🐴 ${r.horse.name}` : r.user.name}</span>
               ))}
             </div>
           )}
@@ -102,7 +101,7 @@ export default function SlotChip({
           {isFull ? 'Polno zasedeno' : `${count} / ${capacity ?? '∞'} rezervacij`}
         </p>
         {reservations.map((r) => (
-          <p key={r.id} className="text-xs">🐴 {r.horse.name} – {r.user.name}</p>
+          <p key={r.id} className="text-xs">{r.horse ? `🐴 ${r.horse.name} – ` : ''}{r.user.name}</p>
         ))}
         {userHasReservation && <p className="text-xs font-medium">✓ Imate rezervacijo</p>}
         {isTeacherSlot && <p className="text-xs opacity-70">★ Vaš termin</p>}
@@ -121,15 +120,18 @@ export default function SlotChip({
       {/* Header: ura + ime + zaseditev */}
       <div className="flex items-start justify-between gap-1">
         <div className="min-w-0 flex-1">
-          {appointment.start_time && (
-            <div className="text-xs font-bold leading-tight">
-              <Clock className="inline w-3 h-3 mr-0.5 opacity-70" />
-              {formatTime(appointment.start_time)}
-              {appointment.end_time && `–${formatTime(appointment.end_time)}`}
-              {isTeacherSlot && <span className="ml-1 opacity-50 text-[10px]">★</span>}
-            </div>
-          )}
-          <div className="text-xs font-medium leading-tight mt-0.5 break-words">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={cn('inline-block w-2 h-2 rounded-full shrink-0', colors.dot)} />
+            {appointment.start_time && (
+              <span className="text-xs font-bold leading-tight">
+                <Clock className="inline w-3 h-3 mr-0.5 opacity-70" />
+                {formatTime(appointment.start_time)}
+                {appointment.end_time && `–${formatTime(appointment.end_time)}`}
+                {isTeacherSlot && <span className="ml-1 opacity-50 text-[10px]">★</span>}
+              </span>
+            )}
+          </div>
+          <div className="text-xs font-medium leading-tight break-words">
             {appointment.name}
           </div>
         </div>
@@ -150,7 +152,7 @@ export default function SlotChip({
                 r.user_id === authUserId ? 'font-semibold' : 'opacity-75',
               )}
             >
-              🐴 {r.horse.name} · {r.user.name}
+              {r.horse ? `🐴 ${r.horse.name} · ` : ''}{r.user.name}
             </div>
           ))}
         </div>

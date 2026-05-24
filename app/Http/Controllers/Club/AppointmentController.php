@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Club;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\AppointmentType;
 use App\Models\Horse;
 use App\Models\Role;
 use App\Models\User;
@@ -46,19 +47,25 @@ class AppointmentController extends Controller
 
         $teachers = User::where('is_active', true)
             ->whereNull('deleted_at')
-            ->whereHas('roles', fn($q) => $q->where('slug', 'ucitelj'))
+            ->where('is_teacher', true)
             ->orderBy('name')
             ->get(['id', 'name']);
+
+        $appointmentTypes = AppointmentType::where('is_active', true)
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'horses_selectable']);
 
         $user = auth()->user();
 
         return Inertia::render('Club/Appointment/Index', [
-            'appointments' => $appointments,
-            'horses'       => $horses,
-            'teachers'     => $teachers,
-            'canCreate'    => $user->hasPermission('appointments.create'),
-            'canEdit'      => $user->hasPermission('appointments.edit'),
-            'canDelete'    => $user->hasPermission('appointments.delete'),
+            'appointments'     => $appointments,
+            'horses'           => $horses,
+            'teachers'         => $teachers,
+            'appointmentTypes' => $appointmentTypes,
+            'canCreate'        => $user->hasPermission('appointments.create'),
+            'canEdit'          => $user->hasPermission('appointments.edit'),
+            'canDelete'        => $user->hasPermission('appointments.delete'),
         ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Core;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppointmentType;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
@@ -37,7 +38,7 @@ class UsersController extends Controller
         )->groupBy('user_id')->pluck('balance', 'user_id');
 
         // Filter users based on role visibility
-        $users = User::with('roles')
+        $users = User::with('roles', 'appointmentTypes')
             ->visibleToUser($currentUser)
             ->orderBy('name')
             ->get()
@@ -48,21 +49,28 @@ class UsersController extends Controller
                     'email' => $user->email,
                     'gsm_number' => $user->gsm_number,
                     'is_active' => $user->is_active,
+                    'is_teacher' => (bool) $user->is_teacher,
                     'is_member' => (bool) $user->is_member,
                     'membership_paid' => (bool) $user->membership_paid,
                     'coupon_balance' => (int) ($couponBalances[$user->id] ?? 0),
                     'roles' => $user->roles->pluck('name'),
+                    'appointment_type_ids' => $user->appointmentTypes->pluck('id')->toArray(),
                     'created_at' => $user->created_at,
                     'deleted_at' => $user->deleted_at,
                 ];
             });
 
         return Inertia::render('Core/Users/Index', [
-            'users' => $users,
-            'roles' => $visibleRoles->values(),
-            'horsemanTypes' => \App\Models\HorsemanType::where('is_active', true)
+            'users'            => $users,
+            'roles'            => $visibleRoles->values(),
+            'horsemanTypes'    => \App\Models\HorsemanType::where('is_active', true)
                 ->orderBy('display_order')
                 ->get(['id', 'name']),
+            'appointmentTypes' => AppointmentType::where('is_active', true)
+                ->whereNull('deleted_at')
+                ->orderBy('display_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'horses_selectable']),
         ]);
     }
 
@@ -93,6 +101,9 @@ class UsersController extends Controller
             'is_member' => 'boolean',
             'membership_paid' => 'boolean',
             'notify_free_slots' => 'boolean',
+            'is_teacher' => 'boolean',
+            'appointment_type_ids'   => 'nullable|array',
+            'appointment_type_ids.*' => 'integer|exists:appointment_types,id',
         ]);
 
         // Check if the role being assigned is visible to the current user
@@ -105,6 +116,9 @@ class UsersController extends Controller
 
         $validated['is_active'] = $validated['is_active'] ?? true;
 
+        $appointmentTypeIds = $validated['appointment_type_ids'] ?? [];
+        unset($validated['appointment_type_ids']);
+
         // Generate random password - user will reset via email
         $validated['password'] = bcrypt(bin2hex(random_bytes(16)));
 
@@ -114,6 +128,8 @@ class UsersController extends Controller
         if (isset($validated['role_id'])) {
             $user->roles()->sync([$validated['role_id']]);
         }
+
+        $user->appointmentTypes()->sync($appointmentTypeIds);
 
         // Send password reset link
         $status = Password::sendResetLink(['email' => $user->email]);
@@ -161,6 +177,9 @@ class UsersController extends Controller
             'is_member' => 'boolean',
             'membership_paid' => 'boolean',
             'notify_free_slots' => 'boolean',
+            'is_teacher' => 'boolean',
+            'appointment_type_ids'   => 'nullable|array',
+            'appointment_type_ids.*' => 'integer|exists:appointment_types,id',
         ]);
 
         // Check if the role being assigned is visible to the current user
@@ -170,6 +189,9 @@ class UsersController extends Controller
                 return redirect()->back()->withErrors(['role_id' => 'You do not have permission to assign this role.']);
             }
         }
+
+        $appointmentTypeIds = $validated['appointment_type_ids'] ?? [];
+        unset($validated['appointment_type_ids']);
 
         $user->update([
             'name' => $validated['name'],
@@ -193,6 +215,7 @@ class UsersController extends Controller
             'is_member' => $validated['is_member'] ?? $user->is_member,
             'membership_paid' => $validated['membership_paid'] ?? $user->membership_paid,
             'notify_free_slots' => $validated['notify_free_slots'] ?? $user->notify_free_slots,
+            'is_teacher' => $validated['is_teacher'] ?? $user->is_teacher,
         ]);
 
         // Sync role if provided
@@ -202,6 +225,8 @@ class UsersController extends Controller
             // If no role provided, remove all roles
             $user->roles()->sync([]);
         }
+
+        $user->appointmentTypes()->sync($appointmentTypeIds);
 
         return redirect()->back()->with('success', 'User updated successfully');
     }

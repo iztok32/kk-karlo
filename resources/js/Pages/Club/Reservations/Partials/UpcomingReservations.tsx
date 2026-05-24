@@ -35,9 +35,11 @@ export default function UpcomingReservations({ reservations, dateFnsLocale, onCa
                 </span>
               )}
               <span className="truncate">{r.appointment.name}</span>
-              <span className="text-muted-foreground text-xs flex items-center gap-1 shrink-0">
-                <span>🐴</span> {r.horse.name}
-              </span>
+              {r.horse && (
+                <span className="text-muted-foreground text-xs flex items-center gap-1 shrink-0">
+                  <span>🐴</span> {r.horse.name}
+                </span>
+              )}
             </div>
             <button
               onClick={() => onCancel(r)}
