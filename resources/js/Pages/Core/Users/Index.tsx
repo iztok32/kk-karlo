@@ -256,7 +256,10 @@ export default function Index({ users, roles, horsemanTypes, appointmentTypes }:
             <div className="space-y-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                        <CardTitle>{t('Users')}</CardTitle>
+                        <CardTitle>
+                            {t('Users')}
+                            <span className="ml-2 text-sm font-normal text-muted-foreground">({filteredUsers.length})</span>
+                        </CardTitle>
                         <div className="flex items-center gap-2">
                             <div className="relative">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
